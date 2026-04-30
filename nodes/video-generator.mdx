@@ -1,0 +1,71 @@
+---
+title: "Video Generator node: AI video generation"
+description: "Generate videos with AI models like Kling V3 and Seedance 2.0. Configure duration, aspect ratio, and audio. Some models require a Business tier."
+---
+
+The Video Generator node runs an AI video model and produces a video as output. You can drive it with a text prompt, an image-to-video workflow where a reference image is animated, or a full pipeline where upstream nodes produce both the prompt and the starting frame automatically.
+
+## Available models
+
+The model picker lists all enabled video models in your workspace. Two models are available by default:
+
+- **Kling V3** — a text-to-video and image-to-video model. Three variants are available depending on the motion style you need.
+- **Seedance 2.0** — a high-quality model for image-to-video and text-to-video workflows.
+
+<Note>
+Seedance 2.0 requires a **Business tier** subscription. Workflows that include a Seedance 2.0 node show a lock badge on the template card if your account is on a lower tier.
+</Note>
+
+Your workspace administrator can add more video models through the Node Builder.
+
+## Input sockets
+
+The sockets available depend on the selected model. Common inputs include:
+
+| Socket | Type | Description |
+|---|---|---|
+| `prompt-in` | Text (orange) | The generation prompt |
+| `image-in` | Image (pink) | Starting reference image for image-to-video |
+| `end-image-in` | Image (pink) | Ending frame for morphing workflows |
+| `audio-in` | Audio (cyan) | Audio track to incorporate into the video |
+| `params-in` | Any (purple) | Parameter bundle from a Request Input node |
+
+Switching models updates the socket set. The node attempts to reconnect existing wires to compatible handles automatically.
+
+## Output sockets
+
+The `video-out` socket on the right side emits the generated video. Connect it to a Response Output to return it to an API caller, or to a Frame Extractor node to continue processing frames.
+
+## Controls on the node
+
+**First row**
+- **Model picker** — select the active model.
+- **Aspect ratio** dropdown — available options depend on the model (for example, 16:9, 9:16, 1:1).
+
+**Second row**
+- **Duration** dropdown — available durations depend on the model (for example, 3 s, 5 s, 10 s). Kling V3 supports up to 15 s.
+- **Resolution** dropdown — appears on models that expose resolution presets.
+- **Sound effects** toggle — appears on models that support AI-generated audio (for example, Kling V3). When enabled, the model generates ambient sound to match the video.
+- **Settings** icon — opens the side panel for advanced configuration.
+- **Run** button — run the node.
+
+## Credit cost
+
+The node header shows the estimated credit cost for the current settings (for example, `~56 cr`). For per-second-priced models like Kling V3, the displayed cost reflects the selected duration (for example, 5 s × rate).
+
+## Side panel inspector
+
+Click the **Settings** icon to open the side panel. From there you can:
+
+- Upload start and end reference images with large tile pickers
+- Edit the prompt in a full-width text area
+- Adjust advanced parameters exposed by the model
+- Choose output format settings
+
+## Generation history
+
+Past results are stored on the node. Use the arrow controls below the preview to navigate between generations, or click **All** for the full-screen gallery.
+
+<Tip>
+Chain an Image Generator into a Video Generator to animate a freshly generated image. Connect the `image-out` socket of the Image Generator to the `image-in` socket of the Video Generator.
+</Tip>

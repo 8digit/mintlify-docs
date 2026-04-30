@@ -1,0 +1,76 @@
+---
+title: "Build your first AI image generation pipeline"
+description: "Step-by-step walkthrough for creating an image generation workflow on the Knouds canvas — from adding nodes to running your first test."
+---
+
+The Knouds canvas lets you wire AI models together visually. In this guide you will build a simple image generation pipeline: a text prompt goes in, a generated image comes out. By the end you will have a saved, runnable workflow and a clear mental model for building more complex pipelines.
+
+<Tip>
+  Choose your workflow name carefully before you create it. The name is converted into a URL slug at creation time — for example, "Product Banner Generator" becomes `product-banner-generator` — and **the slug cannot be changed later**. A descriptive name makes your API calls readable and your workflow easy to find.
+</Tip>
+
+<Steps>
+  <Step title="Open the canvas">
+    Go to [knouds.ai](https://knouds.ai) and click **New Workflow** in the top bar or on the homepage.
+
+    In the dialog that appears, choose **From Scratch**, then type a descriptive name for your workflow (for example, "Product Image Generator"). Click **Create** to open the blank canvas.
+  </Step>
+
+  <Step title="Add a Request Input node">
+    The left sidebar lists all available node categories. Open the **Inputs** category and drag a **Request Input** node onto the canvas.
+
+    In the node's settings panel, click **Add field** and configure it:
+
+    - **Name:** `prompt`
+    - **Type:** Text
+
+    This field is what callers will provide when they run the workflow — either through the canvas form or via the API.
+  </Step>
+
+  <Step title="Add an Image Generator node and connect it">
+    Open the **Image Models** category in the sidebar and drag an **Image Generator** node onto the canvas next to your Request Input node.
+
+    Connect the nodes:
+
+    1. Hover over the **text** output handle (orange dot) on the right edge of the Request Input node.
+    2. Click and drag to the **prompt** input handle on the left edge of the Image Generator node.
+    3. Release to create the wire.
+
+    With the Image Generator node selected, configure it in the panel on the right:
+
+    - **Model:** choose your preferred image model from the dropdown.
+    - **Aspect ratio:** set to your desired output dimensions (for example, `16:9`).
+
+    <Note>
+      Only nodes that are connected to the flow will execute. If you place a node on the canvas but leave it disconnected, it is skipped automatically when the workflow runs.
+    </Note>
+  </Step>
+
+  <Step title="Add a Response Output node and connect it">
+    Open the **Outputs** category in the sidebar and drag a **Response Output** node onto the canvas.
+
+    Connect the **image** output handle (pink dot) on the right edge of the Image Generator node to the input handle of the Response Output node.
+
+    The Response Output node is what the API returns and what the canvas displays after a run.
+  </Step>
+
+  <Step title="Run the workflow on the canvas">
+    Click the **Run** button on the Image Generator node (the play icon in the node's top-right corner). A prompt input form appears.
+
+    Type a test prompt — for example: `a golden retriever sitting in a sunlit park` — and click **Run**.
+
+    Knouds executes the connected nodes in order. You will see a progress indicator on each node as it runs.
+  </Step>
+
+  <Step title="View the result inline">
+    Once execution completes, the generated image appears directly inside the Image Generator node and in the Response Output node. Click the image to expand it.
+
+    If the result is not what you expected, adjust the prompt or model settings and click **Run** again — each run is independent.
+  </Step>
+
+  <Step title="Save the workflow">
+    Click **Save** in the top bar (or press `Cmd+S` / `Ctrl+S`). Knouds writes the current node graph, settings, and last result to your account.
+
+    Your workflow is now saved and callable via the REST API. See [Deploy a workflow as a REST API](/guides/deploy-as-api) for the next step.
+  </Step>
+</Steps>

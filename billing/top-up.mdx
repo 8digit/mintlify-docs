@@ -1,0 +1,61 @@
+---
+title: "Top up your Knouds credit balance with extra packs"
+description: "Buy extra credits on top of your plan allowance with a top-up pack. Learn how top-up credits stack, expire, and differ from Free tier trial grants."
+---
+
+Top-up credits are an optional, one-time credit purchase you can add on top of your existing plan allowance. If your monthly credits run low and you do not want to upgrade your plan, a top-up pack lets you extend your runway for the current period without changing your subscription.
+
+## What top-up credits are
+
+When you buy a top-up pack, the credits are added to a separate top-up balance alongside your plan credits. Every time you run a pipeline, Knouds deducts from your plan balance first. Only when your plan balance reaches zero does it draw from your top-up balance.
+
+Top-up credits are not permanent. They carry an expiry date set at the time of purchase. If you do not use them before that date, they are forfeited automatically.
+
+<Warning>
+Top-up credits expire. Check the expiry date in **Settings → Billing** before purchasing a pack — buying credits you cannot use before they expire is wasted spend.
+</Warning>
+
+## When to use a top-up
+
+Top-up packs are a good fit when:
+
+- You are near the end of your billing cycle and your plan credits are running low.
+- You have a one-off project that temporarily needs more capacity.
+- You want to avoid upgrading to a higher tier just for a short burst of usage.
+
+If you regularly exhaust your plan credits before the cycle renews, upgrading your plan is more cost-effective than repeatedly buying top-up packs.
+
+## How to buy a top-up pack
+
+<Steps>
+  <Step title="Open billing settings">
+    Go to **Settings → Billing** in your Knouds account.
+  </Step>
+  <Step title="Select a pack">
+    Under **Top Up Credits**, browse the available packs. Each pack shows the credit amount and price. Packs with a badge or highlight may offer a better value per credit.
+  </Step>
+  <Step title="Checkout via Stripe">
+    Click the pack you want. You will be redirected to a Stripe checkout page. Complete the payment with a credit or debit card.
+  </Step>
+  <Step title="Credits applied">
+    After payment is confirmed, the credits are added to your top-up balance immediately. You can verify the new balance and the expiry date in **Settings → Billing**.
+  </Step>
+</Steps>
+
+## Top-up packs are pre-defined
+
+Knouds offers a fixed set of top-up packs — you cannot enter an arbitrary dollar amount. The available packs and their credit values are shown in **Settings → Billing → Top Up Credits**. Pack availability may change over time.
+
+## What `INSUFFICIENT_CREDITS` means
+
+If a pipeline execution fails with `INSUFFICIENT_CREDITS` (HTTP 402), your combined plan and top-up balance was too low to cover the estimated cost of the run.
+
+To resolve it, do one of the following:
+
+- **Buy a top-up pack** — go to **Settings → Billing → Top Up Credits** and purchase a pack.
+- **Wait for your plan credits to refresh** — if your renewal date is close, your balance will reset automatically.
+- **Upgrade your plan** — moving to a higher tier gives you a larger monthly allowance.
+
+<Note>
+If your Free tier trial grant is exhausted, `INSUFFICIENT_CREDITS` is not the error you will see — you will instead see `grant_exhausted` or `MODEL_TIER_REQUIRED`. A top-up pack does **not** restore trial grant access. You must upgrade your tier to continue using a model after its trial grant runs out.
+</Note>

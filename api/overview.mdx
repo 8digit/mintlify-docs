@@ -1,0 +1,60 @@
+---
+title: "Knouds REST API: endpoints, auth, and response format"
+description: "A complete reference to the Knouds REST API — base URL, authentication, available endpoints, and what you need to know before your first call."
+---
+
+The Knouds REST API lets you run deployed workflows, inspect their input schemas, list your workflows, and — on Business or Enterprise plans — invoke individual registry models and manage workflow definitions programmatically. Every request and response uses JSON over HTTPS.
+
+## Base URL
+
+All endpoints are served from:
+
+```
+https://knouds.ai
+```
+
+There is no version prefix in the URL. The current stable surface is the v4.7+ contract. Additive changes (new optional fields, new endpoints) roll out continuously without versioning. Breaking changes ship with a major-version entry in the changelog.
+
+## Request format
+
+Set `Content-Type: application/json` on every request that includes a body. Endpoints that accept no body (GET requests) ignore the header.
+
+## Authentication
+
+Every API endpoint requires a valid API key passed in the `x-api-key` request header. Keys are generated in **Settings → API Keys** in your account dashboard.
+
+```bash
+curl https://knouds.ai/api/workflows \
+  -H "x-api-key: YOUR_KEY"
+```
+
+See [Authentication](/api/authentication) for the full guide on key scopes and how to handle `401` and `403` responses.
+
+## Response format
+
+All responses — including errors — are JSON objects. Successful responses vary by endpoint. Error responses always include at minimum:
+
+```json
+{ "error": "<message>", "code": "<CODE>" }
+```
+
+Some error codes include additional context fields. See [Error codes](/api/errors) for the complete reference.
+
+## Endpoints
+
+| Method | Path | Scope required | Description |
+|--------|------|----------------|-------------|
+| `POST` | `/api/workflows/:slug/run` | any authenticated | Run a deployed workflow |
+| `GET` | `/api/workflows/:slug/schema` | any authenticated | Get a workflow's input schema |
+| `GET` | `/api/workflows` | any authenticated | List your workflows |
+| `POST` | `/api/models/:internalName/run` | `admin` | Run a single registry model |
+| `POST` | `/api/workflows` | `admin` | Create a workflow |
+| `PUT` | `/api/workflows/:slug` | `admin` | Update a workflow |
+| `DELETE` | `/api/workflows/:slug` | `admin` | Delete a workflow |
+| `GET` | `/api/pricing/public` | none | Fetch public pricing and tier information |
+
+The `admin` scope is available to Business and Enterprise plan holders. See [Authentication](/api/authentication) for the full scope table.
+
+<Note>
+Your account must be approved before any API access is granted. If your requests return `401`, check that your account has been approved in addition to verifying your API key.
+</Note>

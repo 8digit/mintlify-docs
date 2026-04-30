@@ -1,0 +1,59 @@
+---
+title: "Knouds — Build AI Pipelines and Deploy as API"
+description: "Knouds is a visual AI pipeline editor. Drag-and-drop nodes to build image, video, music, and LLM workflows, then deploy them as REST API endpoints."
+---
+
+Knouds lets you build AI-powered workflows on a visual canvas and deploy them as production-ready API endpoints — no code required for the canvas, and full programmatic control when you need it. Connect image generators, video models, LLMs, and music generators into pipelines that run with a single API call.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Create your first workflow and run it via API in under 5 minutes.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Full reference for the Knouds REST API — run workflows, call models, manage workflows.
+  </Card>
+  <Card title="Node Types" icon="diagram-project" href="/nodes/inputs-outputs">
+    Learn about every node type available on the canvas: inputs, generators, LLMs, and more.
+  </Card>
+  <Card title="Plans & Billing" icon="credit-card" href="/billing/plans">
+    Understand credits, tier plans, and how to top up your balance.
+  </Card>
+</CardGroup>
+
+## How Knouds works
+
+Knouds is built around three ideas: **nodes**, **workflows**, and **deployments**.
+
+- **Nodes** are the building blocks — each one represents an operation like generating an image, running an LLM prompt, or accepting an input from your API caller.
+- **Workflows** are collections of connected nodes. You wire them together on the canvas to form a pipeline.
+- **Deployments** make a workflow callable as an API endpoint. Any approved Knouds account can call a deployed workflow via `POST /api/workflows/:slug/run` using an API key.
+
+<Steps>
+  <Step title="Sign up and get approved">
+    Create an account at [knouds.ai](https://knouds.ai). New accounts go through a brief approval step before you can run workflows.
+  </Step>
+  <Step title="Build a workflow on the canvas">
+    Drag nodes from the sidebar, connect them with wires, and configure each node's settings. Add a **Request Input** node to define the inputs your API callers will provide.
+  </Step>
+  <Step title="Generate your API key">
+    Go to **Settings → API Keys** and create a key. Copy it — it shows once.
+  </Step>
+  <Step title="Call your workflow">
+    Send a `POST` request to `https://knouds.ai/api/workflows/your-workflow-slug/run` with your inputs in the body and your API key in the `x-api-key` header.
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Build your first pipeline" icon="wand-magic-sparkles" href="/guides/build-first-pipeline">
+    Step-by-step guide to building and running a real workflow.
+  </Card>
+  <Card title="Deploy as API" icon="cloud-arrow-up" href="/guides/deploy-as-api">
+    Learn how to make your workflow callable from any external system.
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    How to create API keys and authenticate your requests.
+  </Card>
+  <Card title="Credits & usage" icon="coins" href="/concepts/credits">
+    Understand how credits work and how each model consumes them.
+  </Card>
+</CardGroup>

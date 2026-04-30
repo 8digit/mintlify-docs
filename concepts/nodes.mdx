@@ -1,0 +1,79 @@
+---
+title: "Understanding nodes: the building blocks of pipelines"
+description: "Nodes are the building blocks of every pipeline. Each node performs one operation and passes its output to the next node through typed handles."
+---
+
+A node is a single operation in a Knouds pipeline. It accepts data through **input handles** on its left edge, processes it, and emits results through **output handles** on its right edge. Connecting nodes together forms a directed graph that Knouds executes from start to finish when you press **Run**.
+
+## Inputs and outputs
+
+Every node has zero or more handles on each side:
+
+- **Input handles (left)** — receive data wired in from an upstream node's output.
+- **Output handles (right)** — emit data that downstream nodes can consume.
+
+Handles are color-coded by data type. See the [handle color reference](/concepts/canvas#handle-color-reference) on the canvas page for the full table.
+
+## Node categories
+
+Nodes are organized into categories in the sidebar.
+
+<CardGroup cols={2}>
+  <Card title="Inputs" icon="arrow-right-to-bracket">
+    **Request Input** — defines the fields that callers send when running the workflow via API. **Upload** — lets you attach a file directly on the canvas during a run.
+  </Card>
+  <Card title="LLMs" icon="message-bot">
+    **Assistant** — runs a language model call (Claude and other configured LLMs). Accepts text prompts and optional image inputs, returns text.
+  </Card>
+  <Card title="Image Models" icon="image">
+    **Image Generator** — generates images from text prompts or reference images using the selected model (e.g. Nano Banana 2, Seedream v5).
+  </Card>
+  <Card title="Video Models" icon="video">
+    **Video Generator** — produces video from text prompts or a starting image using the selected model (e.g. Kling Video v3).
+  </Card>
+  <Card title="Music Models" icon="music">
+    **Music Generator** — generates audio tracks from text descriptions using the selected model (e.g. Suno V5). All music models are registry-based.
+  </Card>
+  <Card title="Utilities" icon="wrench">
+    **List** — processes arrays of items. **HTTP Request** — makes arbitrary HTTP calls to external APIs.
+  </Card>
+  <Card title="Custom" icon="puzzle">
+    **Custom Model** and **Registry Node** — models added by your workspace admin via the Node Builder. They appear in this category alongside built-in nodes.
+  </Card>
+  <Card title="Outputs" icon="arrow-right-from-bracket">
+    **Response Output** — collects the data you want to return as the workflow's API response.
+  </Card>
+</CardGroup>
+
+## How data flows
+
+When you run a workflow, Knouds automatically determines the correct execution order. It starts from nodes with no unmet inputs and works forward through the graph, passing each node's output into the inputs of every connected downstream node.
+
+<Note>
+  Only nodes that are connected to the execution graph run. Disconnected nodes are skipped entirely. This means you can leave unused nodes on the canvas without them affecting your results or consuming credits.
+</Note>
+
+## Node status states
+
+Each node displays a status indicator during and after a run:
+
+| State | Meaning |
+|---|---|
+| Idle | Not yet run in this session |
+| Executing | Currently processing |
+| Completed | Finished successfully — output is available |
+| Error | An error occurred — check the node's output panel for details |
+
+If a node fails, downstream nodes that depend on its output are also prevented from running, cascading the failure through that branch of the graph.
+
+## Linked fields
+
+When a node's input field is connected to an output handle from another node, the field becomes **linked**. Linked fields display a badge instead of an editable control, and their value is read-only on the canvas — the value is supplied at run time by the upstream node.
+
+## The side panel inspector
+
+Clicking a node opens the **side panel** on the right side of the canvas. The panel shows all configuration fields for that node, including settings that are not shown directly on the canvas card (such as system prompts, reference images, and output format options).
+
+<Tip>
+  For generator nodes, the side panel is the best place to configure reference images (start frame, end frame, style, character) and advanced parameters, without cluttering the canvas card.
+</Tip>

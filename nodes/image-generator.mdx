@@ -1,0 +1,72 @@
+---
+title: "Image Generator node: AI image generation"
+description: "Run AI image models like Seedream V5 and nano-banana-2 in your pipeline. Configure aspect ratio, resolution, count, and reference images."
+---
+
+The Image Generator node runs an AI image model and produces one or more images as output. You can connect it to a Request Input to make your prompt dynamic, chain it with an Assistant to craft prompts automatically, and wire its output to a Response Output to expose the result through your workflow's API.
+
+## Available models
+
+The model picker on the node lists all available image models. Two models are available out of the box:
+
+- **nano-banana-2** — a fast, general-purpose model suitable for most image generation tasks
+- **Seedream V5** — a high-quality model with more detailed output
+
+Your workspace administrator can add more models through the Node Builder. The picker always reflects what is currently enabled.
+
+## Input sockets
+
+The inputs available on a given node depend on the selected model. Common inputs include:
+
+| Socket | Type | Description |
+|---|---|---|
+| `prompt-in` | Text (orange) | The generation prompt. Connect a Request Input or Text Box here. |
+| `image-in` | Image (pink) | General reference image |
+| `style-in` | Image (pink) | Style reference image |
+| `character-in` | Image (pink) | Character reference image |
+| `start-image-in` | Image (pink) | Starting image for image-to-image generation |
+| `end-image-in` | Image (pink) | Target image for morphing workflows |
+| `params-in` | Any (purple) | Parameter bundle from a Request Input node |
+
+Not every model exposes all of these. When you switch models, the node automatically updates its sockets and attempts to reconnect any existing wires to compatible handles.
+
+## Output sockets
+
+The `image-out` socket on the right side of the node emits the generated image. Connect it to a Response Output, another generator, or an Assistant node for further processing.
+
+## Controls on the node
+
+Below the prompt textarea you will find two rows of controls:
+
+**First row**
+- **Count stepper** — how many images to generate per call (1–15). Disabled when a List node is connected upstream, because the list length controls the batch size in that case.
+- **Model picker** — select the active model.
+
+**Second row**
+- **Aspect ratio** dropdown — choose from the options the selected model supports (for example, 1:1, 16:9, 9:16).
+- **Resolution** dropdown — appears when the model exposes resolution presets.
+- **Settings** icon — opens the side panel for advanced configuration.
+- **Run** button — run the node.
+
+## Credit cost
+
+The estimated credit cost for the current settings is shown in the node header (for example, `~35 cr`). The cost updates when you change the count or, for models with per-second pricing, when you change duration.
+
+## Side panel inspector
+
+Click the **Settings** icon to open the side panel. From there you can:
+
+- Upload reference images (style, character, start/end) with large tile pickers
+- Edit the prompt in a full-width text area
+- Adjust advanced parameters the model exposes (negative prompt, guidance scale, seed, and others depending on the model)
+- Choose output format
+
+Changes in the side panel sync instantly to the node and vice versa.
+
+<Tip>
+A simple image API workflow is: **Request Input** (prompt field) → **Image Generator** → **Response Output**. The caller sends `{"prompt": "..."}` and gets back an image URL.
+</Tip>
+
+## Generation history
+
+Each time you run the node, the new result is appended to the node's generation history. Use the arrow controls below the preview to navigate between past generations. Click **All** to open a full-screen gallery where you can browse and delete individual results.

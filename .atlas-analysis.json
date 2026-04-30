@@ -1,0 +1,109 @@
+{
+  "projectType": "saas",
+  "projectName": "Knouds",
+  "projectDescription": "Knouds is a visual AI pipeline editor where you drag-and-drop nodes to build image, video, music, and LLM workflows, then deploy them as API endpoints.",
+  "theme": "luma",
+  "primaryColor": "#0c0c0c",
+  "lightColor": "#848484",
+  "darkColor": "#c9c9c9",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/canvas",
+              "concepts/nodes",
+              "concepts/workflows",
+              "concepts/credits"
+            ]
+          },
+          {
+            "group": "Node Types",
+            "pages": [
+              "nodes/inputs-outputs",
+              "nodes/image-generator",
+              "nodes/video-generator",
+              "nodes/music-generator",
+              "nodes/assistant",
+              "nodes/utilities"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/build-first-pipeline",
+              "guides/deploy-as-api",
+              "guides/api-keys",
+              "guides/manage-credits"
+            ]
+          },
+          {
+            "group": "Plans & Billing",
+            "pages": [
+              "billing/plans",
+              "billing/top-up"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/rate-limits",
+              "api/errors"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/run-workflow",
+              "api/run-model",
+              "api/workflow-crud",
+              "api/workflow-schema"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Visual drag-and-drop AI pipeline editor",
+    "Image, video, music, and LLM generation nodes",
+    "Deploy workflows as REST API endpoints",
+    "Per-user API keys with scoped access",
+    "Credits-based billing with tier plans",
+    "Node Builder for adding custom AI models (admin)",
+    "Playground shareable links",
+    "Folder organization for workflows",
+    "Real-time execution with per-node progress",
+    "Template library with tier-gated models"
+  ],
+  "publicApiSurface": [
+    "POST /api/workflows/:slug/run",
+    "GET /api/workflows/:slug/schema",
+    "GET /api/workflows/:slug/public-schema",
+    "GET /api/workflows",
+    "GET /api/workflows/:slug",
+    "POST /api/workflows",
+    "PUT /api/workflows/:slug",
+    "DELETE /api/workflows/:slug",
+    "POST /api/models/:internalName/run",
+    "GET /api/pricing/public"
+  ]
+}

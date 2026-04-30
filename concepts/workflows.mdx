@@ -1,0 +1,69 @@
+---
+title: "Workflows: save, organize, and deploy your pipelines"
+description: "A workflow is a saved pipeline with a unique slug, a set of nodes and edges, and a viewport. Deploy any workflow as a REST API endpoint."
+---
+
+A workflow is the saved form of a pipeline you build on the canvas. It stores everything Knouds needs to reproduce and run your pipeline: the nodes, the wires between them, the settings on each node, and the position of your viewport. Once saved, a workflow can be run interactively on the canvas, shared as a playground link, or called programmatically through a REST API.
+
+## Workflow structure
+
+Every workflow is stored as a JSON document with the following top-level fields:
+
+| Field | Description |
+|---|---|
+| `slug` | URL-safe identifier used in API paths and file storage. Immutable after creation. |
+| `name` | Human-readable display name. You can rename this at any time without affecting the slug. |
+| `nodes` | Array of node definitions — type, position, and all field values. |
+| `edges` | Array of connections between node handles. |
+| `viewport` | Saved pan position and zoom level (`x`, `y`, `zoom`). |
+| `description` | Optional free-text description of what the workflow does. |
+| `tags` | Optional array of labels for organizing workflows. |
+
+## The workflow slug
+
+<Warning>
+  The slug is set at creation time and **cannot be changed later**. It is used as the disk filename, the API path (`/api/workflows/{slug}/run`), and the usage log foreign key. Name your workflow carefully when you create it — the name you enter becomes the slug.
+</Warning>
+
+If you leave the name blank when creating a workflow, it defaults to "Untitled workflow" and receives a slug like `untitled-workflow-2`. You can rename the display name at any time, but the slug stays fixed.
+
+## Saving and loading workflows
+
+Knouds auto-saves your workflow as you work. You can also save manually from the toolbar. Workflows are loaded from the editor URL: `https://knouds.ai/app/editor/{slug}`.
+
+## Organizing with folders
+
+You can move workflows into folders from the home page. Folders support nesting — you can create folders inside folders to build a hierarchy. The home page shows only root-level workflows and folders; navigate into a folder to see its contents.
+
+## Templates
+
+Knouds provides pre-built workflow templates you can copy to start from a working pipeline instead of a blank canvas.
+
+<Note>
+  Some templates use models that require a higher-tier plan. Templates gated to a higher tier display a lock badge. Clicking the badge shows which plan you need to access that template.
+</Note>
+
+## Running a workflow
+
+You have two ways to run a workflow:
+
+<Steps>
+  <Step title="Run on the canvas">
+    Press the **Run** button in the canvas toolbar to execute the full workflow interactively. You can also right-click individual nodes to run a single node in isolation.
+  </Step>
+  <Step title="Call via API">
+    Every workflow is available as a REST endpoint. Send a `POST` request to `/api/workflows/{slug}/run` with your API key and a JSON body matching the fields defined in your Request Input node.
+  </Step>
+</Steps>
+
+## The Request Input node
+
+The **Request Input** node defines the API surface of your workflow. Each field you add to a Request Input node becomes a key in the JSON body that callers send when hitting the API endpoint. When running on the canvas, you fill in these fields directly on the node.
+
+## Playground
+
+Each workflow can be shared as a **Playground** link — a hosted page where anyone can try the workflow without writing code. You control whether the playground is public or private from the workflow settings.
+
+<Tip>
+  The Playground is a great way to let non-technical stakeholders test a workflow before you integrate it into your application.
+</Tip>

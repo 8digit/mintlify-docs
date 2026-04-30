@@ -1,0 +1,98 @@
+---
+title: "Manage your Knouds credit balance and top-ups"
+description: "Understand how Knouds credits work, where to check your balance, how to buy a top-up pack, and what the API returns when your balance runs out."
+---
+
+Knouds uses a credit system to meter AI model usage. Each time a model node runs — whether on the canvas or through the API — credits are deducted from your balance. This page explains how credits are allocated, how to add more, and what the system does when your balance reaches zero.
+
+## Checking your balance
+
+Your current credit balance is visible in two places:
+
+- **Top bar of the canvas** — a live counter updates after every run.
+- **Settings → Billing** — shows your full balance, including any top-up credits and when they expire.
+
+Each generator node on the canvas also displays an estimated cost in credits before you run it, so you can gauge usage before committing.
+
+## How credits are consumed
+
+Every AI model run deducts credits from your balance. The exact amount depends on the model and the options you choose (for example, resolution and aspect ratio affect image generation cost). The node shows an estimated cost in credits before you click Run — treat this as an approximation; the actual deduction is calculated after execution completes.
+
+Credits are deducted per node execution. A workflow with three model nodes deducts credits three times when it runs end-to-end.
+
+## Free plan: trial grants
+
+Free accounts receive a trial grant — a fixed number of free generations per model. These grants let you evaluate a model before committing to a paid plan.
+
+<Warning>
+  **Trial grants and paid credits work differently.** When your trial grant for a model is exhausted, you cannot simply top up credits to continue — the system blocks access until you upgrade your tier. Topping up credits does not restore grant access on the Free plan. You will see a `grant_exhausted` error code when this happens.
+
+  If your paid plan's monthly credit allowance runs out, you can top up credits to continue without changing your tier.
+</Warning>
+
+Once a trial grant is exhausted, the API returns:
+
+```json
+{
+  "error": "Insufficient credits",
+  "code": "grant_exhausted"
+}
+```
+
+To continue using that model, upgrade to a paid plan from **Settings → Billing** or the [pricing page](https://knouds.ai/pricing).
+
+## Paid plans: monthly credit allowance
+
+Pro, Business, and Enterprise plans include a credit allowance that refreshes automatically at the start of each billing period. You do not need to do anything — the credits are added to your balance when your invoice is paid.
+
+If you use your monthly allowance before the next renewal, you can either wait for the refresh or top up immediately.
+
+## Topping up credits
+
+Top-up credits are a one-time purchase of extra credits on top of your plan balance. They are useful when you have a high-volume project that exceeds your monthly allowance.
+
+To top up:
+
+1. Go to **Settings → Billing**.
+2. Select a credit pack under **Top Up**.
+3. Complete the Stripe checkout.
+
+Credits are added to your balance immediately after payment. Top-up credits have an expiration date — unused credits are forfeited after the period shown at purchase. Check the expiration date in **Settings → Billing → Transactions**.
+
+You can also trigger a top-up programmatically:
+
+```bash
+curl -X POST https://knouds.ai/api/billing/checkout-topup \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"packId": "pack_500"}'
+```
+
+Or with a custom amount (legacy):
+
+```bash
+curl -X POST https://knouds.ai/api/billing/checkout-topup \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10}'
+```
+
+Both return a Stripe checkout URL (`{ "url": "https://checkout.stripe.com/..." }`) that you redirect the user to.
+
+## What happens at zero
+
+When your balance reaches zero, the API returns `402`:
+
+```json
+{
+  "error": "Insufficient credits",
+  "code": "INSUFFICIENT_CREDITS"
+}
+```
+
+| Error code | Cause | Resolution |
+|---|---|---|
+| `INSUFFICIENT_CREDITS` | Your plan credits (and any top-up balance) are depleted | Top up or wait for your monthly refresh |
+| `grant_exhausted` | Your trial grant for this model is used up | Upgrade your plan tier |
+
+Canvas runs will show an error badge on the node that failed. API runs return the `402` status shown above. In both cases, no credits are deducted for the failed run.

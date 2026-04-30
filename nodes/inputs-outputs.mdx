@@ -1,0 +1,113 @@
+---
+title: "Input and output nodes in Knouds"
+description: "How to use Request Input, Response Output, Media Upload, and Frame Extractor nodes to control what flows into and out of your workflow."
+---
+
+Every workflow in Knouds has at least one way to receive data and at least one way to return results. The nodes on this page are the building blocks for that boundary: what your callers send in, what your pipeline returns, and how you embed static files directly on the canvas.
+
+## Request Input node
+
+The Request Input node defines the fields that an API caller (or the Playground) must provide when running your workflow. Each field you configure here becomes a key in the JSON request body when your workflow is called at `/api/workflows/:slug/run`.
+
+For example, if you add a field named `prompt`, callers send:
+
+```json
+{
+  "prompt": "A futuristic cityscape at night"
+}
+```
+
+You can add as many fields as your workflow needs and drag them to reorder.
+
+### Field types
+
+Click **Add field** on the node to open the field picker. You can choose from catalog fields (common parameters like `prompt`, `aspect_ratio`, `resolution`, `num_images`, `duration`) or create a **Custom field** with any name.
+
+When you create a custom field, you select its UI type:
+
+| Type | What it renders |
+|---|---|
+| Text | Single-line input |
+| Textarea | Multi-line text area |
+| Number | Numeric input |
+| Slider | Range slider with min, max, and step |
+| Pills | Button group (you define the options) |
+| Toggle | On/off switch |
+
+For image or video upload fields, the node renders a media uploader that accepts files and stores an HTTPS URL.
+
+### Output sockets
+
+Each text or media field gets its own output socket on the right side of the node. Parameter fields (aspect ratio, resolution, count, duration, and similar) are grouped into a single **params** socket to keep the canvas tidy.
+
+Connect these sockets to the matching inputs on downstream nodes — for example, wire the `prompt` socket to the `prompt-in` socket of an Image Generator.
+
+### Field settings
+
+Click the gear icon on any field to open its constraint panel. You can:
+
+- Restrict **allowed options** on pill fields (or let them auto-sync from the connected downstream node)
+- Set **min, max, and step** for number and slider fields
+- Write **helper text** that appears below the field in the Playground
+- Override the **playground label** shown to end users
+- Toggle whether the field **shows on Playground**
+
+<Tip>
+When you connect a Request Input field to an Image or Video Generator, the node automatically reads the generator's allowed values and shows an **AUTO** badge on the field. Options stay in sync as you switch models.
+</Tip>
+
+---
+
+## Response Output node
+
+The Response Output node collects the final result of your workflow and returns it to the API caller. Connect the output socket of any generator or assistant to this node.
+
+The node accepts three input types on its left side:
+
+- **image** — renders a preview thumbnail after a run and returns the image URL
+- **video** — returns the video URL
+- **text** — returns text (for example, from an Assistant node)
+
+### Property name
+
+The **Property name** field sets the JSON key under which the result appears in the API response. The default is `output`.
+
+```json
+{
+  "output": "https://..."
+}
+```
+
+After a successful run, the node previews the result directly on the canvas — image results show a thumbnail, text results show the first 400 characters.
+
+---
+
+## Media Upload node
+
+The Media Upload node lets you embed a static file — an image, video, or audio clip — directly in your workflow. You upload the file once and it becomes part of the saved workflow.
+
+This is useful for fixed references that every run should use: a brand logo for style transfer, a background audio track, or a sample image you always want to include.
+
+<Note>
+Media Upload is **not** exposed to API callers. The file is baked into the workflow. If callers need to supply their own file on each run, use a Request Input node with an image or video upload field instead.
+</Note>
+
+### Output sockets
+
+The sockets that appear depend on what you upload:
+
+| Uploaded file | Available outputs |
+|---|---|
+| Image | `image-out` |
+| Video | `video-out`, `start-out` (first frame), `end-out` (last frame), `audio-out` |
+| Audio | `audio-out` |
+
+You can replace the file at any time with the **Replace** button. The node auto-detects the file type from the MIME type — you never have to specify it manually.
+
+---
+
+## Frame Extractor node
+
+The Frame Extractor node takes a video and extracts individual frames as image outputs. Connect a video source to it and use the extracted frames as reference images for downstream nodes — for example, feeding the first frame of a generated video into an Image Generator as a style reference, or chaining a frame into a second Video Generator to extend a clip.
+
+Use Frame Extractor when you need more control over which frame is extracted, or when the video is produced dynamically during a run rather than uploaded ahead of time. For static uploaded videos, the Media Upload node already provides `start-out` and `end-out` sockets as a shortcut.

@@ -1,0 +1,88 @@
+---
+title: "Quickstart: build and call your first Knouds workflow"
+description: "Sign up, build your first AI pipeline on the canvas, generate an API key, and make your first Knouds workflow API call in minutes."
+---
+
+This guide walks you through creating a Knouds account, building a simple image-generation pipeline on the canvas, and calling it via the REST API. By the end you'll have a working endpoint you can integrate into any application.
+
+<Note>
+New accounts require admin approval before you can run workflows. After signing up and verifying your email, your account enters a pending state. You'll receive an email when your account is approved and ready to use.
+</Note>
+
+<Steps>
+  <Step title="Sign up at knouds.ai">
+    Go to [knouds.ai](https://knouds.ai) and create an account. You can sign up with your email address or with Google.
+
+    After signing up, check your inbox for a verification email and click the confirmation link. Once your email is verified, your account will be reviewed for approval. You'll get a follow-up email when you're approved and can start building.
+  </Step>
+
+  <Step title="Build your first workflow">
+    Once approved, open the canvas from your dashboard and create a new workflow. Give it a descriptive name — the name becomes part of your API endpoint URL and cannot be changed later.
+
+    Add three nodes to the canvas:
+
+    1. **Request Input node** — this defines the inputs your API accepts. Add a text field named `prompt`.
+    2. **Image Generator node** — this runs the image model. Connect the `prompt` output from the Request Input node to the `prompt` input on the Image Generator.
+    3. **Response Output node** — this collects the result and returns it in the API response. Connect the image output from the Image Generator to the Response Output node.
+
+    Your canvas should show a left-to-right flow: Request Input → Image Generator → Response Output. Click **Run** to test the workflow on the canvas before deploying.
+  </Step>
+
+  <Step title="Deploy the workflow">
+    Save your workflow using the toolbar. Knouds automatically makes the workflow available at:
+
+    ```
+    POST https://knouds.ai/api/workflows/YOUR-WORKFLOW-SLUG/run
+    ```
+
+    The slug is derived from the name you gave the workflow at creation time. You can find the exact slug in the workflow's URL when it's open in the editor.
+  </Step>
+
+  <Step title="Generate an API key">
+    Go to **Settings → API Keys** and create a new key. The plaintext key is shown only once at creation — copy it immediately and store it somewhere safe.
+
+    Your key's scope is determined by your account tier:
+
+    - **Free** — `free` scope, 10 requests/min
+    - **Pro** — `deployment` scope, 100 requests/min
+    - **Business / Enterprise** — `admin` scope, 1000 requests/min
+
+    All scopes can run deployed workflows, so any key works for the next step.
+  </Step>
+
+  <Step title="Call your workflow via the API">
+    Use `curl` to run your workflow. Replace `YOUR-SLUG` with your workflow's slug and `YOUR_API_KEY` with the key you just copied:
+
+    ```bash
+    curl -X POST https://knouds.ai/api/workflows/YOUR-SLUG/run \
+      -H "x-api-key: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"inputs": {"prompt": "a serene mountain landscape"}}'
+    ```
+
+    A successful response looks like this:
+
+    ```json
+    {
+      "success": true,
+      "result": {
+        "images": [
+          { "url": "https://..." }
+        ]
+      },
+      "cost": 0.003,
+      "ms": 4210
+    }
+    ```
+
+    - `result` contains the model output, including any media URLs
+    - `cost` is the number of credits deducted from your balance for this run
+    - `ms` is the total execution time in milliseconds
+  </Step>
+</Steps>
+
+## Next steps
+
+- Read the [authentication guide](/authentication) to understand API key scopes and rate limits in detail.
+- Explore [node types](/concepts/nodes) to see what else you can add to your pipelines.
+- Check the [API reference](/api/overview) for all available endpoints, request shapes, and error codes.

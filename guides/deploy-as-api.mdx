@@ -1,0 +1,119 @@
+---
+title: "Deploy a Knouds workflow as a callable REST API"
+description: "Every saved Knouds workflow is instantly callable as a REST endpoint. Learn how to find the slug, authenticate, and send your first API request."
+---
+
+Every workflow you save on Knouds is automatically available as a REST endpoint — no deployment step required. The workflow's Request Input fields define the JSON body the caller must provide, and the Response Output node determines what comes back. This guide walks you through calling a saved workflow from any HTTP client.
+
+## How it works
+
+When you save a workflow, Knouds assigns it a permanent slug derived from its name (for example, `product-image-generator`). You call the workflow by posting to:
+
+```
+POST https://knouds.ai/api/workflows/{slug}/run
+```
+
+The workflow executes server-side — all model credentials stay on Knouds servers and are never exposed to the caller.
+
+<Steps>
+  <Step title="Ensure your workflow has a Request Input node">
+    The JSON body you send to the API maps directly to the fields you define on a **Request Input** node. If your workflow does not have one, add it from the **Inputs** category in the sidebar and define each field your callers should provide.
+
+    For example, a field named `prompt` of type **Text** means callers must send `{"inputs": {"prompt": "..."}}` in the request body.
+  </Step>
+
+  <Step title="Find the workflow slug">
+    The slug appears in the URL when you are editing the workflow:
+
+    ```
+    https://knouds.ai/app/editor/your-workflow-slug
+    ```
+
+    The part after `/editor/` is your slug. You can also find it on the Knouds home page by hovering over a workflow card — the URL shown is your slug.
+
+    The slug is set at creation time from the workflow name and cannot be changed. If your slug is not descriptive, you will need to create a new workflow with a better name.
+  </Step>
+
+  <Step title="Generate an API key">
+    Go to **Settings → API Keys** and click **Create key**.
+
+    Give the key a name (for example, "Production integration") and choose a scope:
+
+    - **`deployment`** — run deployed workflows and read their schemas. Default for Pro accounts. Use this for most integrations.
+    - **`admin`** — additionally create, update, and delete workflows, and call single-model endpoints. Default for Business and Enterprise accounts.
+    - **`free`** — run your own deployed workflows only. Default for Free accounts.
+
+    Copy the key immediately — it is shown only once. Store it securely (see [Create and manage API keys](/guides/api-keys)).
+  </Step>
+
+  <Step title="Call the workflow">
+    Send a `POST` request with your API key in the `x-api-key` header and the input values in the `inputs` object:
+
+    ```bash
+    curl -X POST https://knouds.ai/api/workflows/your-workflow-slug/run \
+      -H "x-api-key: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"inputs": {"prompt": "a golden retriever at sunset"}}'
+    ```
+
+    A successful response looks like:
+
+    ```json
+    {
+      "success": true,
+      "result": {
+        "images": [{"url": "https://..."}]
+      },
+      "cost": 12,
+      "ms": 8420
+    }
+    ```
+
+    - `result` contains the workflow's output — image URLs, video URLs, or text, depending on what your workflow produces.
+    - `cost` is the number of credits deducted from your balance for this run.
+    - `ms` is the total server-side execution time in milliseconds.
+  </Step>
+</Steps>
+
+## Inspecting the input schema
+
+Before building an integration, you can fetch the exact input fields a workflow expects:
+
+```bash
+curl https://knouds.ai/api/workflows/your-workflow-slug/schema \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+The response lists each field's name, type, default value, and any allowed options — useful for dynamically building request bodies or validating inputs client-side.
+
+## Rate limits
+
+Every response from the run endpoint includes rate limit headers so your integration can pace itself:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 87
+X-RateLimit-Reset: 1714512000
+```
+
+`X-RateLimit-Reset` is a Unix epoch timestamp indicating when the current window resets. Limits by scope:
+
+| Scope | Requests per minute |
+|---|---|
+| `free` | 10 |
+| `deployment` (Pro) | 100 |
+| `admin` (Business / Enterprise) | 1000 |
+
+When you exceed the limit, the API returns `429` with a `Retry-After` header (in seconds) telling you when to resume.
+
+## Sharing a workflow publicly
+
+If you want to share a workflow so others can try it without authenticating, set `publicPlayground: true` on the workflow. This makes the schema available at the unauthenticated endpoint:
+
+```
+GET https://knouds.ai/api/workflows/{slug}/public-schema
+```
+
+<Note>
+  The public schema endpoint returns only the input field definitions — it does not expose nodes, edges, model configurations, or any internal details of your workflow. Callers still need a valid API key to actually run the workflow.
+</Note>

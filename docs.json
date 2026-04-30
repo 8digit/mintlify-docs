@@ -1,0 +1,97 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "luma",
+  "name": "Knouds",
+  "colors": {
+    "primary": "#0c0c0c",
+    "light": "#848484",
+    "dark": "#c9c9c9"
+  },
+  "favicon": "https://media.brand.dev/301bdc82-6bf7-4e8c-b277-b2f60a2fce1b.png",
+  "logo": {
+    "light": "https://media.brand.dev/262e1dda-7768-4bda-b99a-587abcd2cc57.svg",
+    "dark": "https://media.brand.dev/262e1dda-7768-4bda-b99a-587abcd2cc57.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/8digit/8digit-knouds"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/canvas",
+              "concepts/nodes",
+              "concepts/workflows",
+              "concepts/credits"
+            ]
+          },
+          {
+            "group": "Node Types",
+            "pages": [
+              "nodes/inputs-outputs",
+              "nodes/image-generator",
+              "nodes/video-generator",
+              "nodes/music-generator",
+              "nodes/assistant",
+              "nodes/utilities"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/build-first-pipeline",
+              "guides/deploy-as-api",
+              "guides/api-keys",
+              "guides/manage-credits"
+            ]
+          },
+          {
+            "group": "Plans & Billing",
+            "pages": [
+              "billing/plans",
+              "billing/top-up"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/rate-limits",
+              "api/errors"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/run-workflow",
+              "api/run-model",
+              "api/workflow-crud",
+              "api/workflow-schema"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

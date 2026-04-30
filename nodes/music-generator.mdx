@@ -1,0 +1,49 @@
+---
+title: "Music Generator node: AI music generation"
+description: "Generate AI music and audio in your pipeline. All models are configured by your admin in Node Builder. Supports multi-track output and canvas preview."
+---
+
+The Music Generator node runs an AI music model and produces one or more audio tracks as output. Use it to generate background music, sound effects, or any other audio asset in your pipeline.
+
+## Available models
+
+Unlike the Image and Video Generator nodes, the Music Generator node has no hardcoded default models. Every model in the picker is configured by your workspace administrator through the Node Builder. **Suno V5** is an example of a model that administrators can enable.
+
+If the model list is empty, ask your administrator to add a music model in the Node Builder.
+
+## Input sockets
+
+The sockets available depend on the active model's definition. Typical inputs include text sockets for the style description and track title, which you can connect from a Text Box or Assistant node to drive generation dynamically.
+
+| Socket | Type | Description |
+|---|---|---|
+| `text-in-style` | Text (orange) | Musical style and mood description |
+| `text-in-title` | Text (orange) | Track title |
+
+## Output sockets
+
+The `audio-out` socket emits the generated audio. Some models return multiple tracks per call (Suno V5 returns two tracks per generation). In that case, the node displays each track separately in the preview, and the output socket carries all tracks.
+
+## Controls on the node
+
+The node body has two text fields:
+
+- **Style** — a multi-line textarea for describing the musical style, mood, instruments, tempo, and any other guidance the model accepts (for example, `"epic cinematic orchestral with rising strings"`).
+- **Title** — the name of the track (up to 80 characters).
+
+At the bottom of the node:
+
+- **Model picker** — select the active model.
+- **Run** button — generate audio.
+
+## Audio preview
+
+After a successful run, each generated track appears inline on the node with an audio player. You can play, pause, scrub, and adjust volume directly on the canvas without opening a separate panel. If the model returns multiple tracks, they are numbered (Track 1, Track 2, and so on).
+
+## Credit cost
+
+The node header shows the estimated credit cost before you run (for example, `~50 cr`). The cost comes from the model's definition in the Node Builder and updates if an administrator changes the pricing.
+
+<Note>
+Music Generator models are defined entirely in the Node Builder by your administrator. There are no hardcoded fallback models — if no models appear in the picker, the node cannot run until an administrator enables at least one music model.
+</Note>

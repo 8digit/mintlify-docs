@@ -1,0 +1,69 @@
+---
+title: "The Knouds canvas: build and connect your pipeline"
+description: "An infinite grid where you build AI pipelines by placing nodes, drawing wires between them, and running the resulting workflow from one place."
+---
+
+The canvas is the main workspace in Knouds. It is an infinite, zoomable grid where you assemble pipelines by placing nodes and connecting them with typed wires. Everything you build is saved with the workflow — including your current zoom level and pan position — so you pick up exactly where you left off.
+
+## Navigating the canvas
+
+| Action | How |
+|---|---|
+| Pan | Click and drag on an empty canvas area |
+| Zoom in / out | Scroll wheel, or pinch on a trackpad |
+| Fit all nodes | Use the fit-view button in the canvas toolbar |
+
+## Adding nodes
+
+<Steps>
+  <Step title="Open the node picker">
+    Click the **+** button on the left sidebar to browse available nodes by category.
+  </Step>
+  <Step title="Choose a node">
+    Browse categories (Inputs, LLMs, Image Models, Video Models, Music Models, Utilities, Custom) or search by name.
+  </Step>
+  <Step title="Place it on the canvas">
+    Click a node in the sidebar to drop it at the center of your viewport, or drag it directly onto the canvas.
+  </Step>
+</Steps>
+
+## Connecting nodes
+
+Every node exposes **input handles** on its left edge and **output handles** on its right edge. To create a connection, drag from an output handle to a compatible input handle. A wire (edge) appears between them carrying data from one node to the next.
+
+<Note>
+  Handles are typed. You can only connect handles of the same type, or connect any typed output to an `any`-typed input, which accepts all types.
+</Note>
+
+### Handle color reference
+
+Handles are color-coded so you can tell at a glance what kind of data a wire carries.
+
+| Type | Color | What it carries |
+|---|---|---|
+| `image` | Pink `#ec4899` | Image data |
+| `video` | Red `#ef4444` | Video data |
+| `text` | Orange `#f97316` | Text strings, prompts, analysis output |
+| `audio` | Cyan `#06b6d4` | Audio files |
+| `media` | Light pink `#f472b6` | Any media file (image, video, or audio) |
+| `aspect_ratio` | Amber `#f59e0b` | Aspect ratio value |
+| `resolution` | Green `#22c55e` | Resolution value |
+| `any` | Purple `#8b5cf6` | Accepts any data type |
+
+## Selecting and deleting nodes
+
+- **Select a node** — click it. A highlight appears and the side panel opens with its settings.
+- **Select multiple nodes** — click and drag a selection box over them, or hold `Shift` and click each node.
+- **Delete** — select the node(s) and press `Backspace` or `Delete`.
+
+## Annotating your canvas
+
+You can place sticky notes and text boxes anywhere on the canvas to document your pipeline or leave notes for collaborators. These annotation nodes have no handles and never participate in execution — they are purely decorative.
+
+<Tip>
+  Use sticky notes to label distinct sections of a complex workflow, such as "Step 1 — Generate image" and "Step 2 — Animate to video".
+</Tip>
+
+## Viewport persistence
+
+When you save a workflow, the canvas stores your current pan position and zoom level in the workflow's `viewport` field (`x`, `y`, `zoom`). Reopening the workflow restores the exact view you were in. If no viewport was saved, Knouds fits the canvas to your nodes automatically.

@@ -1,0 +1,78 @@
+---
+title: "Assistant node: LLM calls in your pipeline"
+description: "Run Claude, GPT, Gemini, and other LLMs as a step in your Knouds pipeline. Supports text generation, vision analysis, and structured list output."
+---
+
+The Assistant node runs a large language model as a step in your pipeline. You can use it to generate text from a prompt, analyze an image, rewrite or expand output from another node, or extract structured data to pass downstream.
+
+## Available models
+
+The model picker lists all enabled LLM models. **Claude Sonnet** is available by default. Your workspace administrator can add other models — including GPT, Gemini, or any OpenAI-compatible endpoint — through the Node Builder.
+
+## Input sockets
+
+| Socket | Type | Description |
+|---|---|---|
+| `prompt-in` | Text (orange) | The user-turn prompt. Overrides what is typed in the node body. |
+| `image-in` | Image (pink) | Image input for vision-capable models |
+| `system-in` | Text (orange) | System prompt. Overrides what is set in the side panel. |
+
+When a socket is connected, it takes precedence over the value typed directly on the node. This lets upstream nodes — like a Text Box with static instructions, or an Image Generator — drive the assistant automatically.
+
+## Output sockets
+
+| Socket | Type | Description |
+|---|---|---|
+| `analysis-out` / `text-out` | Text (orange) | The model's text response |
+| `items-out` | Any (purple) | Structured list output (when Export mode is set to **List**) |
+
+## Node body
+
+The node body has two views you can toggle between using the icons in the top-right corner of the card:
+
+- **Prompt view** — shows what will be sent to the model. If the `prompt-in` socket is connected, this displays the incoming value.
+- **Result view** — shows the model's response after a run. You can edit this text directly; edits persist and flow downstream.
+
+While the model is running, the body shows an animated thinking indicator. Once the response starts arriving, it streams in character by character.
+
+## Controls on the node
+
+At the bottom of the node:
+
+- **Model picker** — select the LLM to use.
+- **Export mode** — choose **Export as Text** (returns the full response as a string) or **Export as List** (splits the response into individual items for use with a List node).
+- **Settings** icon — opens the side panel.
+- **Run** button — execute the node.
+
+## Side panel inspector
+
+Click the **Settings** icon to open the side panel. From there you can:
+
+- Write or edit the **system prompt** in a full-width text area
+- Configure the **prompt** for the current run
+- Adjust model-specific parameters such as temperature, max tokens, and reasoning effort (availability depends on the model)
+
+## Credit cost
+
+The node header shows the estimated credit cost before you run (for example, `~30 cr`). The cost comes from the model definition and updates if an administrator changes the pricing.
+
+## Common use cases
+
+<CardGroup cols={2}>
+  <Card title="Prompt generation" icon="pencil">
+    Connect a Request Input → Assistant → Image Generator to let the LLM expand a short user description into a detailed image prompt before sending it to the generator.
+  </Card>
+  <Card title="Image analysis" icon="eye">
+    Connect an Image Generator (or Media Upload) → Assistant to describe, classify, or extract information from images using a vision-capable model.
+  </Card>
+  <Card title="Text transformation" icon="repeat">
+    Chain two Assistant nodes to translate, rewrite, or summarize the output of the first before passing it downstream.
+  </Card>
+  <Card title="Structured extraction" icon="list">
+    Set Export mode to **List** and connect the `items-out` socket to a List node to turn a numbered response into individual items for batch processing.
+  </Card>
+</CardGroup>
+
+<Tip>
+To analyze a generated image, connect the `image-out` socket of an Image Generator to the `image-in` socket of an Assistant node. Then connect the Assistant's `text-out` to a Response Output to return the analysis as text.
+</Tip>

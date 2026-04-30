@@ -1,0 +1,151 @@
+---
+title: "Run a single registered model directly via API"
+description: "Invoke any enabled registry model directly by internalName without a workflow — available to Business and Enterprise API key holders with admin scope."
+---
+
+Use this endpoint to run a single registry-defined model directly, without wrapping it in a workflow. You provide the model's `internalName` and a set of field inputs, and Knouds executes the model and returns the result.
+
+This endpoint is designed for advanced automation where you want to call a specific model — such as a custom image generator or an LLM — without the overhead of deploying a full workflow.
+
+<Note>
+This endpoint requires **admin scope**, which is available on Business and Enterprise plans. Pro and Free keys receive a `403 SCOPE_DENIED` response. If you are on a lower plan, use [POST /api/workflows/:slug/run](/api/run-workflow) with a deployed workflow instead.
+</Note>
+
+## Endpoint
+
+```
+POST /api/models/:internalName/run
+```
+
+## Authentication
+
+Admin scope required. Pass your Business or Enterprise API key in the `x-api-key` header.
+
+## Rate limits
+
+Admin-scoped keys are subject to the 1000 req/min limit. The same `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers returned by the workflow run endpoint are also present on responses from this endpoint.
+
+## Path parameters
+
+<ParamField path="internalName" type="string" required>
+  The model's internal slug. You can find this in the **Node Builder** admin panel — it is the identifier shown under the model's name. For example: `seedance-2-i2v`, `gpt-image-2`.
+
+  Slugs are lowercase letters, digits, and hyphens. The value must match an enabled registry model. Not all model names work — see the registry-only scope section below.
+</ParamField>
+
+## Request body
+
+<ParamField body="inputs" type="object" required>
+  Key/value pairs matching the model's field schema as configured in Node Builder. The accepted field names map directly to the parameters the underlying provider expects.
+
+  ```json
+  {
+    "inputs": {
+      "<field-name>": "<value>"
+    }
+  }
+  ```
+
+  Omitting `inputs` entirely, or passing a non-object value, returns `400 INVALID_INPUTS`.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Always `true` on a 200 response.
+</ResponseField>
+
+<ResponseField name="result" type="object">
+  The model's output. The shape depends on the model type. Common structures include `images`, `videos`, `audios`, and `text` arrays or strings. Media URLs point to S3-hosted files on the `knouds-media` bucket.
+</ResponseField>
+
+<ResponseField name="cost" type="number">
+  Credits deducted from your account balance for this run. If the run consumed a trial grant instead of your credit balance, this value is `0`.
+</ResponseField>
+
+<ResponseField name="ms" type="number">
+  Execution time in milliseconds from request receipt to response.
+</ResponseField>
+
+## Registry-only scope
+
+This endpoint only exposes **registry-defined** models — models your workspace administrator has configured and enabled in Node Builder. Built-in models that come with the canvas (such as nano-banana-2, Seedream V5, Kling V3, and Claude Sonnet) are **not** accessible via this endpoint.
+
+<Note>
+To run built-in canvas models, build a workflow that includes the relevant Image Generator, Video Generator, or Assistant node and call it via [POST /api/workflows/:slug/run](/api/run-workflow).
+</Note>
+
+## Error responses
+
+| Status | Code | Meaning |
+|---|---|---|
+| `400` | `INVALID_INPUTS` | `inputs` is missing, not an object, or contains invalid values. |
+| `400` | `INVALID_SLUG` | The `internalName` path parameter is not a valid slug. |
+| `402` | `grant_exhausted` | Your trial grant for this model has been used up. Upgrade to continue. |
+| `403` | `SCOPE_DENIED` | Your key does not have admin scope. The response includes `required` and `actual` scope fields. |
+| `403` | `MODEL_TIER_REQUIRED` | The model requires a higher plan tier than your account holds. |
+| `404` | `MODEL_NOT_FOUND` | No enabled, non-native registry model exists with the given `internalName`. |
+| `429` | `RATE_LIMIT_EXCEEDED` | Per-minute limit exceeded. Check `Retry-After`. |
+| `500` | `EXECUTION_FAILED` | The provider call failed. The `error` field describes the cause. |
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://knouds.ai/api/models/seedance-2-i2v/run \
+  -H "x-api-key: $KNOUDS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"inputs":{"prompt":"midnight neon street","aspect_ratio":"16:9"}}'
+```
+
+```python Python
+import os, requests
+
+response = requests.post(
+    "https://knouds.ai/api/models/seedance-2-i2v/run",
+    headers={
+        "x-api-key": os.environ["KNOUDS_KEY"],
+        "Content-Type": "application/json",
+    },
+    json={"inputs": {"prompt": "midnight neon street", "aspect_ratio": "16:9"}},
+)
+data = response.json()
+print(data["result"])
+print(f"Cost: {data['cost']} credits — ran in {data['ms']}ms")
+```
+
+```javascript Node.js
+const response = await fetch(
+  "https://knouds.ai/api/models/seedance-2-i2v/run",
+  {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.KNOUDS_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      inputs: { prompt: "midnight neon street", aspect_ratio: "16:9" },
+    }),
+  }
+);
+const data = await response.json();
+console.log(data.result);
+```
+
+</CodeGroup>
+
+**Example response:**
+
+```json
+{
+  "success": true,
+  "result": {
+    "videos": [
+      { "url": "https://knouds-media.s3.amazonaws.com/media/xyz789.mp4" }
+    ]
+  },
+  "cost": 48,
+  "ms": 22310
+}
+```

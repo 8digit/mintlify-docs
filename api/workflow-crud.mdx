@@ -1,0 +1,270 @@
+---
+title: "Create, update, and delete workflows via API"
+description: "Create, read, update, move, and delete workflows programmatically. Write operations require admin scope; read operations work with any authenticated key."
+---
+
+The workflow CRUD endpoints let you manage workflow definitions through the API. You can list, fetch, create, update, reorganize, and delete workflows without using the Knouds editor.
+
+<Note>
+Write operations — `POST`, `PUT`, and `DELETE` — require **admin scope**, available to Business and Enterprise plan holders. Read operations (`GET`) work with any authenticated scope.
+</Note>
+
+---
+
+## List workflows
+
+```
+GET /api/workflows
+```
+
+Returns an array of workflow summaries for your account. Templates visible to all users are also included.
+
+**Auth:** any authenticated scope.
+
+**Response:** an array of workflow summary objects.
+
+<ResponseField name="slug" type="string">
+  The workflow's URL slug and unique identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The display name of the workflow.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  The workflow's description, if set.
+</ResponseField>
+
+<ResponseField name="tags" type="string[]">
+  Tag labels assigned to the workflow.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of the last update.
+</ResponseField>
+
+<ResponseField name="estimatedCreditCost" type="number">
+  Estimated credit cost per run, calculated from the workflow's generator nodes and your account tier. `null` if the workflow has no generator nodes.
+</ResponseField>
+
+<ResponseField name="folderId" type="string">
+  ID of the folder this workflow lives in. `null` if the workflow is at the root level.
+</ResponseField>
+
+**Example:**
+
+```bash
+curl https://knouds.ai/api/workflows \
+  -H "x-api-key: $KNOUDS_KEY"
+```
+
+---
+
+## Get a workflow
+
+```
+GET /api/workflows/:slug
+```
+
+Returns the full workflow JSON for a single workflow. The response shape is identical to the body accepted by `POST /api/workflows` — it is round-trip safe and suitable for backup, forking, or using as a template.
+
+**Auth:** any authenticated scope.
+
+**Path parameter:** `slug` — the workflow identifier.
+
+**Example:**
+
+```bash
+curl https://knouds.ai/api/workflows/my-thumbnail-pipeline \
+  -H "x-api-key: $KNOUDS_KEY"
+```
+
+---
+
+## Create a workflow
+
+```
+POST /api/workflows
+```
+
+Creates a new workflow. The server slugifies the `name` field to generate the workflow's slug, appending `-2`, `-3`, etc. if the slug is already taken.
+
+**Auth:** admin scope required.
+
+**Request body:**
+
+<ParamField body="name" type="string" required>
+  The workflow's display name. The server converts this to a URL slug (lowercase, hyphens) and uses it as the permanent identifier. Choose the name carefully — the slug cannot be changed after creation.
+</ParamField>
+
+<ParamField body="description" type="string">
+  A short description of what the workflow does.
+</ParamField>
+
+<ParamField body="tags" type="string[]">
+  Tag labels for the workflow.
+</ParamField>
+
+<ParamField body="nodes" type="array">
+  The workflow's node definitions. Each node object includes `id`, `type`, `position`, and `data`.
+</ParamField>
+
+<ParamField body="edges" type="array">
+  The connections between nodes. Each edge object includes `id`, `source`, `target`, `sourceHandle`, and `targetHandle`.
+</ParamField>
+
+<ParamField body="viewport" type="object">
+  The saved canvas viewport. Includes `x`, `y`, and `zoom` fields. The editor restores this position when the workflow is opened.
+</ParamField>
+
+<ParamField body="publicPlayground" type="boolean">
+  When `true`, the workflow's schema is accessible without authentication via `GET /api/workflows/:slug/public-schema`. Defaults to `false`.
+</ParamField>
+
+<ParamField body="folderId" type="string">
+  ID of the folder to place the workflow in. Omit or pass `null` to create it at the root level.
+</ParamField>
+
+**Response:** the created workflow JSON, including the assigned `slug` and timestamps.
+
+**Example:**
+
+```bash
+curl -X POST https://knouds.ai/api/workflows \
+  -H "x-api-key: $KNOUDS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Image Pipeline",
+    "description": "Generates product images from a prompt",
+    "tags": ["image"],
+    "nodes": [],
+    "edges": []
+  }'
+```
+
+---
+
+## Update a workflow
+
+```
+PUT /api/workflows/:slug
+```
+
+Updates an existing workflow. You can pass a full or partial workflow JSON — any fields you include overwrite the stored values; fields you omit are preserved from the existing workflow.
+
+**Auth:** admin scope required.
+
+**Path parameter:** `slug` — the workflow to update.
+
+**Request body:** any subset of the workflow JSON fields. The `slug` field is always read from the URL and cannot be changed via the request body.
+
+<Warning>
+A workflow's slug is immutable. The URL slug is the disk filename, the API identifier, and the key used in usage logs. There is no rename operation. If you need a workflow with a different slug, create a new one and delete the old one.
+</Warning>
+
+**Response:** the full updated workflow JSON.
+
+**Example:**
+
+```bash
+curl -X PUT https://knouds.ai/api/workflows/my-image-pipeline \
+  -H "x-api-key: $KNOUDS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Updated description"}'
+```
+
+---
+
+## Move a workflow to a folder
+
+```
+PUT /api/workflows/:slug/move
+```
+
+Moves a workflow into a folder or back to the root level. This is a separate endpoint from the general update because folder organization is an independent concern from workflow content.
+
+**Auth:** admin scope required.
+
+**Path parameter:** `slug` — the workflow to move.
+
+**Request body:**
+
+<ParamField body="folderId" type="string">
+  The ID of the destination folder. Pass `null` to move the workflow back to the root level.
+</ParamField>
+
+**Response:**
+
+```json
+{ "slug": "my-image-pipeline", "folderId": "folder-abc123" }
+```
+
+**Example — move to a folder:**
+
+```bash
+curl -X PUT https://knouds.ai/api/workflows/my-image-pipeline/move \
+  -H "x-api-key: $KNOUDS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"folderId": "folder-abc123"}'
+```
+
+**Example — move back to root:**
+
+```bash
+curl -X PUT https://knouds.ai/api/workflows/my-image-pipeline/move \
+  -H "x-api-key: $KNOUDS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"folderId": null}'
+```
+
+---
+
+## Delete a workflow
+
+```
+DELETE /api/workflows/:slug
+```
+
+Permanently deletes a workflow. This action cannot be undone.
+
+**Auth:** admin scope required.
+
+**Path parameter:** `slug` — the workflow to delete.
+
+**Response:**
+
+```json
+{ "deleted": "my-image-pipeline" }
+```
+
+**Example:**
+
+```bash
+curl -X DELETE https://knouds.ai/api/workflows/my-image-pipeline \
+  -H "x-api-key: $KNOUDS_KEY"
+```
+
+---
+
+## Workflow JSON schema
+
+The full workflow object accepted and returned by these endpoints follows this shape:
+
+```json
+{
+  "slug": "my-workflow",
+  "name": "My Workflow",
+  "description": "What this workflow does",
+  "tags": ["image", "automation"],
+  "isTemplate": false,
+  "publicPlayground": false,
+  "folderId": null,
+  "nodes": [],
+  "edges": [],
+  "viewport": { "x": 0, "y": 0, "zoom": 1 },
+  "createdAt": "2026-04-30T00:00:00.000Z",
+  "updatedAt": "2026-04-30T00:00:00.000Z"
+}
+```
+
+The `GET /api/workflows/:slug` response is round-trip safe: you can `GET` a workflow, modify the JSON, and `PUT` it back without losing any fields.

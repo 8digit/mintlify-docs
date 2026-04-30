@@ -1,0 +1,98 @@
+---
+title: "Knouds API error codes and responses"
+description: "Every Knouds API error code, its HTTP status, what it means, and how to resolve it — including the two distinct 402 codes that require different fixes."
+---
+
+All non-2xx responses from the Knouds API return a JSON body. At minimum it contains `error` (a human-readable message) and `code` (a machine-readable constant). Some errors include additional context fields to help you diagnose the problem without guessing.
+
+```json
+{ "error": "<message>", "code": "<CODE>", ...context }
+```
+
+## Error reference
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| `400` | `INVALID_INPUTS` | The request body is malformed or missing required fields. Check that `inputs` is a non-array object. |
+| `400` | `INVALID_SLUG` | The workflow slug or model `internalName` in the URL contains invalid characters. Slugs must be lowercase letters, digits, and hyphens only. |
+| `400` | `INVALID_SCOPE` | The scope value supplied when assigning a key scope is not recognized. |
+| `401` | *(no code)* | The `x-api-key` header is missing, the key has been revoked, or the key is invalid. |
+| `402` | `INSUFFICIENT_CREDITS` | Your account does not have enough credits to complete the request. Top up your credit balance to continue. |
+| `402` | `grant_exhausted` | Your trial grant for this model has been fully used. Topping up credits will not unlock further access — you must upgrade your plan tier. |
+| `403` | `SCOPE_DENIED` | Your key's scope is below the minimum required by this endpoint. The response includes `required` and `actual` scope fields. |
+| `403` | `MODEL_TIER_REQUIRED` | The model you are trying to run requires a higher plan tier than your account currently holds. |
+| `404` | `MODEL_NOT_FOUND` | The `internalName` in the URL does not match any enabled registry model. Only non-native registry models are reachable via the models endpoint. |
+| `404` | *(message)* | The workflow slug in the URL does not match any workflow you own. |
+| `429` | `RATE_LIMIT_EXCEEDED` | You have exceeded the per-minute request limit for your scope. Check the `Retry-After` header and wait before retrying. |
+| `500` | `EXECUTION_FAILED` | The upstream provider call failed. This is not a client error — retry with exponential back-off. |
+
+## Distinguishing the two 402 codes
+
+Two different situations both return `402`, but they require different responses from you:
+
+- **`INSUFFICIENT_CREDITS`** — you have a valid plan and the model is accessible, but your credit balance is too low. Go to **Settings → Billing** and top up your credits.
+- **`grant_exhausted`** — your plan includes a limited trial grant for this model (for example, 3 free lifetime generations on a Free plan) and you have used them all. Topping up credits will not help here. You need to upgrade to a higher plan tier that provides either continued trial access or unrestricted billing access to the model.
+
+<Warning>
+If you receive `grant_exhausted`, adding credits to your account will not resolve the error. The grant is a tier-level feature, not a credit-level one. Upgrade your plan to regain access.
+</Warning>
+
+## SCOPE_DENIED response shape
+
+When your key's scope is below what an endpoint requires, the response includes the two scope values so you can act without guessing:
+
+```json
+{
+  "error": "Insufficient scope",
+  "code": "SCOPE_DENIED",
+  "required": "admin",
+  "actual": "deployment"
+}
+```
+
+Use `required` to determine which plan tier provides the access you need. See [Authentication](/api/authentication) for the scope-to-tier mapping.
+
+## Handling errors in code
+
+<CodeGroup>
+
+```javascript JavaScript
+const response = await fetch(url, options);
+
+if (!response.ok) {
+  const err = await response.json();
+
+  if (response.status === 429) {
+    const retryAfter = parseInt(response.headers.get('Retry-After') || '10', 10);
+    // Wait and retry
+  } else if (err.code === 'INSUFFICIENT_CREDITS') {
+    // Prompt user to top up credits
+  } else if (err.code === 'grant_exhausted') {
+    // Prompt user to upgrade plan — credits won't help
+  } else if (err.code === 'SCOPE_DENIED') {
+    console.error(`Need ${err.required} scope, have ${err.actual}`);
+  }
+}
+```
+
+```python Python
+import requests
+
+response = requests.post(url, headers=headers, json=body)
+
+if not response.ok:
+    err = response.json()
+    code = err.get('code')
+
+    if response.status_code == 429:
+        retry_after = int(response.headers.get('Retry-After', 10))
+        # Wait and retry
+    elif code == 'INSUFFICIENT_CREDITS':
+        # Prompt user to top up credits
+    elif code == 'grant_exhausted':
+        # Prompt user to upgrade plan — credits won't help
+    elif code == 'SCOPE_DENIED':
+        print(f"Need {err['required']} scope, have {err['actual']}")
+```
+
+</CodeGroup>

@@ -1,0 +1,65 @@
+---
+title: "Credits: how Knouds measures and charges for AI runs"
+description: "Credits are the unit of consumption on Knouds. Every AI model run deducts credits. Your plan determines how many credits you receive each billing period."
+---
+
+Credits are the currency Knouds uses to measure and charge for AI model runs. Every time you execute a node that calls an AI model — an Image Generator, Video Generator, Music Generator, Assistant, or Custom Model — credits are deducted from your balance. Non-AI nodes (Request Input, HTTP Request, List, Response Output) do not consume credits.
+
+## How credits are calculated
+
+The cost of a run depends on the model and the parameters you choose:
+
+- **Per-image models** — cost scales with the number of images you request.
+- **Per-second models** — cost scales with the output duration (e.g. a 10-second video costs more than a 5-second video).
+- **Per-call models** — a fixed credit amount per run regardless of parameters.
+
+Each node shows its **estimated credit cost** in the run menu before you execute, so you can see what a run will cost before committing.
+
+<Tip>
+  The cost estimate updates as you change parameters like duration and number of images.
+</Tip>
+
+## Plans and credit allowances
+
+| Plan | Credits per month | Notes |
+|---|---|---|
+| Free | 500 | Trial access; some models are gated after the trial grant is exhausted |
+| Pro | 5,000 | Monthly allowance refreshed each billing period |
+| Business | 15,000 | Required for high-tier models such as Seedance 2.0 |
+| Enterprise | Custom | Unlimited — contact sales |
+
+Credits refresh at the start of each billing period. Unused credits do not roll over.
+
+## Trial grants (Free plan)
+
+On the Free plan, certain models are available through **trial grants** rather than from your credit balance. A trial grant gives you a fixed number of free generations (for example, 3 lifetime generations of a specific model). While headroom remains, those runs are free.
+
+<Warning>
+  When a trial grant is exhausted, the model is **blocked** — you cannot continue using it on the Free plan by topping up credits. You must upgrade your plan to regain access. Trial grants are a "try before you buy" mechanism, not a credit pool.
+</Warning>
+
+Similarly, a **time-based trial** opens an access window (for example, 7 days of free access). After the window closes, the model is blocked until you upgrade.
+
+## Buying additional credits (top-up packs)
+
+If you need more credits than your plan provides, you can purchase a top-up pack from the billing page. Top-up credits are added on top of your monthly allowance and expire after a set number of days (shown at checkout).
+
+<Note>
+  Top-up credits are separate from your subscription allowance. Your monthly allowance refreshes on schedule regardless of how many top-up credits you have remaining.
+</Note>
+
+## What happens when you run out of credits
+
+If a model run would exceed your available credit balance, the request fails with an **HTTP 402** error and the code `INSUFFICIENT_CREDITS`. The canvas displays an error state on the node.
+
+To continue running, either:
+- Purchase a top-up pack from **Settings → Billing**, or
+- Upgrade your plan for a larger monthly allowance.
+
+## High-tier model access (Business and Enterprise)
+
+Some models are restricted to specific plans regardless of credit balance. For example, **Seedance 2.0** requires the Business or Enterprise plan. Attempting to run a gated model on a lower plan returns a `MODEL_TIER_REQUIRED` error and prompts you to upgrade.
+
+<Note>
+  The Business plan requires a verification step before you can subscribe. Contact the Knouds team to begin business verification.
+</Note>

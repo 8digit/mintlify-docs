@@ -1,0 +1,108 @@
+---
+title: "Create and manage API keys for Knouds"
+description: "Generate scoped API keys to authenticate programmatic requests to Knouds workflows and models, and learn how to store, rotate, and revoke them safely."
+---
+
+API keys let you authenticate requests to Knouds from scripts, CI pipelines, and external applications — anywhere you cannot use a browser session. Each key carries a scope that limits what it can do, capped by your account tier.
+
+<Warning>
+  The full key value is shown **only once**, immediately after creation. Copy it before closing the dialog. If you lose the key, you must delete it and generate a new one — there is no way to retrieve the original value.
+</Warning>
+
+<Steps>
+  <Step title="Go to Settings → API Keys">
+    Sign in to [knouds.ai](https://knouds.ai) and open **Settings** from the top navigation. Select the **API Keys** tab.
+
+    You will see a list of your existing keys, each showing its name, creation date, and scope badge.
+  </Step>
+
+  <Step title="Click 'Create key'">
+    Click the **Create key** button. A dialog opens where you configure the new key.
+  </Step>
+
+  <Step title="Choose a name and scope">
+    Give the key a descriptive name that identifies where it will be used — for example, "GitHub Actions deploy" or "Mobile app production".
+
+    Then select a scope. Your available options are capped by your account tier:
+
+    | Scope | Default for | What you can do |
+    |---|---|---|
+    | `admin` | Business / Enterprise | Run any model, create / update / delete workflows, call the single-model endpoint |
+    | `deployment` | Pro | Run deployed workflows, read workflow schemas |
+    | `free` | Free | Run your own deployed workflows |
+
+    Scopes are cumulative — `admin` includes everything `deployment` can do, and `deployment` includes everything `free` can do.
+
+    If you need a key with fewer permissions than your tier default (for example, a `deployment`-scoped key on a Business account), you can select the lower scope at creation time.
+  </Step>
+
+  <Step title="Copy the key immediately">
+    After clicking **Create**, the full key value is displayed once. Copy it now and store it in a secrets manager or environment variable.
+
+    The key starts with `knouds_live_` and is not retrievable after you close the dialog.
+  </Step>
+
+  <Step title="Use the key in your requests">
+    Pass the key in the `x-api-key` request header on every API call:
+
+    ```bash
+    curl -H "x-api-key: $KNOUDS_API_KEY" \
+      -H "Content-Type: application/json" \
+      https://knouds.ai/api/workflows/my-flow/run \
+      -X POST \
+      -d '{"inputs": {"prompt": "a mountain at dusk"}}'
+    ```
+  </Step>
+</Steps>
+
+## Code examples
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://knouds.ai/api/workflows/my-flow/run \
+  -H "x-api-key: $KNOUDS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"inputs": {"prompt": "a mountain at dusk"}}'
+```
+
+```javascript JavaScript (fetch)
+const res = await fetch('https://knouds.ai/api/workflows/my-flow/run', {
+  method: 'POST',
+  headers: {
+    'x-api-key': process.env.KNOUDS_API_KEY,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ inputs: { prompt: 'a mountain at dusk' } }),
+})
+const data = await res.json()
+```
+
+```python Python (requests)
+import os, requests
+
+resp = requests.post(
+    'https://knouds.ai/api/workflows/my-flow/run',
+    headers={'x-api-key': os.environ['KNOUDS_API_KEY']},
+    json={'inputs': {'prompt': 'a mountain at dusk'}}
+)
+print(resp.json())
+```
+
+</CodeGroup>
+
+## Storing keys safely
+
+Never hardcode an API key in source code or commit it to a repository. Instead, load it from an environment variable:
+
+```bash
+export KNOUDS_API_KEY="knouds_live_abc..."
+```
+
+In CI/CD systems (GitHub Actions, CircleCI, etc.), add `KNOUDS_API_KEY` as a secret in your repository settings and reference it in your workflow file.
+
+## Revoking a key
+
+To revoke a key, go to **Settings → API Keys**, find the key in the list, and click **Delete**. The key is invalidated immediately — any request that uses it will receive a `401` response.
+
+There is no way to temporarily disable a key without deleting it. If you suspect a key has been compromised, delete it and create a replacement.

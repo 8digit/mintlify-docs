@@ -1,0 +1,161 @@
+---
+title: "GET /api/workflows/:slug/schema"
+description: "Retrieve a workflow's Request Input field definitions to discover what keys and types to pass when calling POST /api/workflows/:slug/run."
+---
+
+The schema endpoints return the input field definitions from a workflow's Request Input node. Use them to discover exactly which field names, types, and default values the workflow expects before scripting calls to `POST /api/workflows/:slug/run`.
+
+<Tip>
+Always call the schema endpoint before writing automation scripts against a workflow you didn't build. The field names returned here are the exact keys you pass in the `inputs` object when running the workflow. Skipping this step is the most common cause of `INVALID_INPUTS` errors.
+</Tip>
+
+## Authenticated schema
+
+```
+GET /api/workflows/:slug/schema
+```
+
+Returns the full input field map for the workflow. This endpoint requires authentication.
+
+**Auth:** any authenticated scope.
+
+**Path parameter:**
+
+<ParamField path="slug" type="string" required>
+  The workflow's URL slug.
+</ParamField>
+
+**Example:**
+
+```bash
+curl https://knouds.ai/api/workflows/my-thumbnail-pipeline/schema \
+  -H "x-api-key: $KNOUDS_KEY"
+```
+
+---
+
+## Public schema (no auth)
+
+```
+GET /api/workflows/:slug/public-schema
+```
+
+Returns the same field map without requiring authentication. This endpoint is only available when the workflow has `publicPlayground: true` set. If the workflow is not marked as a public playground, this endpoint returns `404`.
+
+Use this endpoint when you are building an unauthenticated form or an embed that collects user inputs before passing them to a server-side call.
+
+**Auth:** none required.
+
+**Path parameter:**
+
+<ParamField path="slug" type="string" required>
+  The workflow's URL slug.
+</ParamField>
+
+**Example:**
+
+```bash
+curl https://knouds.ai/api/workflows/my-thumbnail-pipeline/public-schema
+```
+
+---
+
+## Response
+
+Both endpoints return the same shape:
+
+<ResponseField name="fields" type="array">
+  An array of input field definitions. Each field describes one key in the `inputs` object you pass to `POST /api/workflows/:slug/run`.
+
+  <Expandable title="field object properties">
+    <ResponseField name="name" type="string">
+      The field's key name. Use this as the property name inside `inputs` when running the workflow.
+    </ResponseField>
+    <ResponseField name="type" type="string">
+      The field's data type (for example, `text`, `select`, `number`, `image_upload`).
+    </ResponseField>
+    <ResponseField name="label" type="string">
+      A human-readable display label for the field.
+    </ResponseField>
+    <ResponseField name="default" type="any">
+      The default value for the field. If you omit a field from `inputs`, the workflow uses this value.
+    </ResponseField>
+    <ResponseField name="options" type="string[]">
+      Available options for `select`-type fields. Only present when `type` is `select`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="values" type="object">
+  The current saved values for each field, as last set in the editor.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The workflow's display name.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  The workflow's description.
+</ResponseField>
+
+<ResponseField name="estimatedCreditCost" type="number">
+  Estimated credits this workflow costs to run, calculated from the generator nodes and your account tier. Only present on the authenticated `/schema` endpoint.
+</ResponseField>
+
+**Example response:**
+
+```json
+{
+  "fields": [
+    {
+      "name": "prompt",
+      "type": "text",
+      "label": "Prompt",
+      "default": ""
+    },
+    {
+      "name": "aspect_ratio",
+      "type": "select",
+      "label": "Aspect ratio",
+      "options": ["16:9", "1:1", "9:16"],
+      "default": "16:9"
+    }
+  ],
+  "values": {
+    "prompt": "",
+    "aspect_ratio": "16:9"
+  },
+  "name": "My Thumbnail Pipeline",
+  "description": "Generates thumbnails from a prompt and aspect ratio",
+  "estimatedCreditCost": 12
+}
+```
+
+<Note>
+The actual field shape depends entirely on what the workflow author configured in the Request Input node. Field types, options, and defaults are set per-workflow. If a workflow has no Request Input node, the `fields` array is empty and the workflow accepts an empty `inputs` object.
+</Note>
+
+---
+
+## Using the schema to build a run request
+
+Once you have the schema, map each `field.name` to a value in the `inputs` object:
+
+```bash
+# 1. Fetch the schema
+curl https://knouds.ai/api/workflows/my-thumbnail-pipeline/schema \
+  -H "x-api-key: $KNOUDS_KEY"
+
+# 2. Use the field names to build the run request
+curl -X POST https://knouds.ai/api/workflows/my-thumbnail-pipeline/run \
+  -H "x-api-key: $KNOUDS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "inputs": {
+      "prompt": "a futuristic city at dawn",
+      "aspect_ratio": "16:9"
+    }
+  }'
+```
+
+Fields you omit from `inputs` fall back to their `default` values as defined in the schema.

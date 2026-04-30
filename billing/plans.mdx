@@ -1,0 +1,81 @@
+---
+title: "Compare Knouds plans: Free, Pro, Business, Enterprise"
+description: "Understand what each Knouds tier includes — monthly credits, model access, API key scope, the Business application process, and how to upgrade."
+---
+
+Knouds organizes access to models and features through four tiers: Free, Pro, Business, and Enterprise. Each tier gives you a monthly credit allowance you spend when running pipelines, plus controls which models you can reach and which API key scopes you can use. This page explains what each tier includes and how to move between them.
+
+## Plan comparison
+
+| Plan | Credits per month | Models | API key scope |
+|------|------------------|--------|---------------|
+| **Free** | Trial grants (see below) | Standard models, trial-gated access | Free scope |
+| **Pro** | Monthly allowance | All standard models | Deployment scope |
+| **Business** | Higher monthly allowance | All models, including Seedance 2.0 | Admin scope |
+| **Enterprise** | Custom (unlimited) | All models, custom configuration | Admin scope |
+
+Credits refresh at the start of each billing cycle. They do not roll over — unused credits from one period are replaced by the new period's allowance.
+
+## The Free tier and trial grants
+
+The Free tier does not work like a paid plan with a small credit balance. Instead, Knouds gives you trial grants: a fixed number of free runs on selected models, after which access to that model is **blocked** until you upgrade.
+
+There are two trial grant shapes:
+
+- **Count grants** — for example, 3 free lifetime runs of a given model. Once you've used all three, that model is blocked on your account. You cannot top up your credit balance to unlock more runs; you must upgrade to a paid tier.
+- **Time grants** — a window of open access (for example, 7 days). Your first run opens the window. When the window closes, the model is blocked until you upgrade.
+
+<Note>
+Trial grants are a "try before you buy" mechanism tied to your tier, not your credit balance. If you exhaust a trial grant, buying a top-up pack will not restore access. You need to upgrade to Pro or above.
+</Note>
+
+The exact number of free runs and which models are trial-gated is shown in the model picker inside the canvas editor.
+
+## Monthly credit refresh on paid plans
+
+On Pro, Business, and Enterprise, your credit balance is reset to your plan's allowance each time your subscription renews. The renewal is handled automatically via Stripe. You can see the date of your last refresh in **Settings → Billing**.
+
+If you are on an annual plan, you receive a credit bonus compared to the monthly rate. The exact bonus is shown at checkout.
+
+## Business tier: application required
+
+Subscribing to Business requires an approved business verification. You must complete the application before Stripe will accept your subscription.
+
+To apply:
+
+1. Go to **Settings → Business Apply**.
+2. Fill in your company details and submit the verification form.
+3. Wait for approval (you will receive an email notification).
+4. Once approved, go to **Settings → Billing** and select the Business plan.
+
+Until your application is approved, the Business plan checkout is disabled for your account.
+
+## Seedance 2.0 and premium models
+
+Seedance 2.0 (both image-to-video and text-to-video variants) is only available on Business and Enterprise tiers. If you try to run a workflow containing a Seedance 2.0 node on a lower tier, the execution will be blocked with a `MODEL_TIER_REQUIRED` error.
+
+Other models may also carry tier restrictions — the model picker shows a lock badge on any model your current tier cannot access.
+
+## API key scope
+
+The API keys you create in **Settings → API Keys** inherit a scope based on your tier:
+
+| Tier | Scope |
+|------|-------|
+| Free | Free scope — limited to free-tier capabilities |
+| Pro | Deployment scope — run workflows via the API |
+| Business / Enterprise | Admin scope — full API access including workflow management |
+
+Upgrading your tier automatically unlocks the higher scope for new keys. Existing keys keep the scope they were created with; rotate them after upgrading if you need the updated permissions.
+
+## How to upgrade
+
+1. Go to **Settings → Billing**.
+2. Select the plan you want.
+3. Choose monthly or annual billing and complete checkout via Stripe.
+
+Your credits are reset to the new tier's allowance immediately after the Stripe payment is confirmed.
+
+<Tip>
+If you are on the Free tier and hitting grant limits frequently, upgrading to Pro is the fastest path to unblocked access — no application required.
+</Tip>

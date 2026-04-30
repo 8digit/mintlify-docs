@@ -1,0 +1,134 @@
+---
+title: "Utility nodes: List, HTTP Request, and more"
+description: "Reference for List, HTTP Request, Text Box, and Sticky Note nodes — collect batches, call external APIs, inject static text, and annotate your canvas."
+---
+
+Utility nodes handle the structural and integration work in a pipeline: collecting batches of items, calling external APIs, injecting static content, and annotating the canvas. None of these nodes run an AI model directly, but they are often the connective tissue that makes a pipeline practical.
+
+## List node
+
+The List node collects multiple items — images, videos, audio files, or text strings — into a single ordered list and passes them downstream as a batch. It is the standard way to feed multiple inputs to a generator at once.
+
+### How it works
+
+When you connect a source to the **Items in** socket, arriving items are appended to (or replace, depending on your setting) the list on each run. A downstream Image Generator or Video Generator that receives the list produces one output per included item.
+
+You can also populate the list manually by selecting a type and using the inline uploader or text editor.
+
+### Item types
+
+When you first add a List node it shows a type picker. Select one of:
+
+- **Text** — numbered rows, each editable by double-clicking
+- **Image** — thumbnail grid with a file uploader
+- **Video** — inline video player tiles
+- **Audio** — audio player tiles
+
+A list holds one type at a time. The type is locked once items are added.
+
+### Including and excluding items
+
+Each item has a small checkbox overlay in the top-left corner. Click it to exclude an item from the next run without removing it from the list. The node footer shows the count of included items out of the total (for example, `3 / 5 Images`).
+
+### Keep vs. Replace
+
+The footer dropdown controls what happens when new upstream results arrive:
+
+- **Keep items** — append new results to the existing list
+- **Replace items** — wipe the list and replace it with the new results on every run
+
+### Sockets
+
+| Socket | Side | Description |
+|---|---|---|
+| `items-in` | Left (bottom) | Receives items from upstream — any type |
+| `items-out` | Right (top) | Passes the list downstream |
+
+---
+
+## HTTP Request node
+
+The HTTP Request node makes any HTTP call to an external API. Use it to read from or write to third-party services — fetching a record, posting a result, triggering a webhook, and so on.
+
+### Configuration
+
+Set the **Method** (GET, POST, PUT, PATCH, or DELETE) and the **URL**. For non-GET methods, a **Body** textarea appears so you can write a JSON payload.
+
+### Variables
+
+You can inject values from upstream nodes into the URL or body using the `{{variable_name}}` syntax. For each variable you reference, click **+ Variable** to register it. This creates a corresponding input socket on the left side of the node labeled with the variable name.
+
+For example, if your URL is `https://api.example.com/records/{{record_id}}`, add a variable named `record_id` and connect a Text Box or upstream output socket to it.
+
+### Response type
+
+Set **Response type** to:
+
+- **auto** — the node tries JSON first, then falls back to text
+- **json** — parse the response as JSON
+- **text** — treat the response as a plain string
+
+### Sockets
+
+| Socket | Side | Description |
+|---|---|---|
+| `url-in` | Left | Override the URL at runtime |
+| `body-in` | Left | Override the request body at runtime |
+| `headers-in` | Left | Inject additional headers |
+| `custom--{name}` | Left | One socket per registered variable |
+| `response-out` | Right | The response body (text or JSON) |
+| `status-out` | Right | The HTTP status code as a string |
+| `media-out` | Right | Any media detected in the response |
+
+After a run, the node shows a response preview with the status code and the first 500 characters of the body.
+
+<Note>
+HTTP Request is free to run — it does not consume credits. Standard API rate limits and external service costs from the third-party API still apply.
+</Note>
+
+---
+
+## Text Box node
+
+The Text Box node is a rich text editor on the canvas that also emits its content as a text output socket. Use it to inject static text — system prompts, fixed instructions, template strings — into a pipeline without asking the API caller to provide them.
+
+### Editing
+
+The node has a formatting toolbar with:
+
+- **Block type** dropdown — Paragraph, H1, H2, H3
+- **Bold**, **Italic**, **Bullet list**, **Blockquote**, **Divider** buttons
+
+Text is stored and emitted as Markdown. Downstream Assistant nodes receive the Markdown structure, which models like Claude interpret correctly for headings and lists. Image generation models receive the symbols as plain text.
+
+The editor auto-grows up to a maximum height as you type. You can also drag the bottom-right corner to resize it manually; the custom height is saved with the workflow.
+
+### Output socket
+
+| Socket | Side | Description |
+|---|---|---|
+| `text-out` | Right | The node's Markdown content as a text string |
+
+Connect `text-out` to the `prompt-in` or `system-in` socket of an Assistant, or to the `prompt-in` of an Image Generator.
+
+---
+
+## Sticky Note
+
+A Sticky Note is a canvas annotation with no sockets and no role in execution. Use it to leave instructions for collaborators, label sections of a complex workflow, or document your intent for a particular set of nodes.
+
+### Editing
+
+Double-click a Sticky Note to enter edit mode. A formatting toolbar appears at the top with bold, italic, bullet list, and heading controls. Click outside the note or press **Esc** to exit edit mode and return the note to its read-only state.
+
+### Colors
+
+In edit mode, click the color swatch in the toolbar to open the color picker. You can choose from preset pastels and gradients, or type a custom CSS color value or `linear-gradient(...)` and click **Apply**.
+
+### Resizing
+
+Drag any edge or corner to resize the note. The resize handles account for the canvas zoom level, so the note corner tracks the cursor correctly at any zoom.
+
+<Note>
+Sticky Notes never run, never consume credits, and cannot be connected to other nodes. They are purely decorative. If you need a node that injects static text into a pipeline, use a **Text Box** node instead.
+</Note>

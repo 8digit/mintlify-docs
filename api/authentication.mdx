@@ -1,0 +1,99 @@
+---
+title: "Knouds API authentication: keys, scopes, and errors"
+description: "How to generate Knouds API keys, pass them in requests, and understand the scope system that controls which endpoints your key can reach."
+---
+
+Every Knouds API request must include a valid API key. Keys carry a **scope** that determines which endpoints you can call and how many requests per minute you are allowed. Understanding scopes before you start will save you from unexpected `403` responses.
+
+## Generating a key
+
+Go to **Settings → API Keys** in your Knouds account and create a new key. The full key value is shown exactly once at creation time — copy it immediately. If you lose it, you must revoke the key and generate a new one.
+
+Your key's scope is set at creation and is capped by your account's plan tier. You cannot assign a scope above your tier ceiling.
+
+## Passing your key
+
+Include the key in the `x-api-key` header on every request:
+
+```bash
+x-api-key: YOUR_KEY
+```
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://knouds.ai/api/workflows/my-pipeline/run \
+  -H "x-api-key: $KNOUDS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"inputs": {"prompt": "a serene lake at dusk"}}'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://knouds.ai/api/workflows/my-pipeline/run',
+  {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.KNOUDS_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ inputs: { prompt: 'a serene lake at dusk' } }),
+  }
+);
+const data = await response.json();
+```
+
+```python Python
+import os, requests
+
+response = requests.post(
+    'https://knouds.ai/api/workflows/my-pipeline/run',
+    headers={
+        'x-api-key': os.environ['KNOUDS_KEY'],
+        'Content-Type': 'application/json',
+    },
+    json={'inputs': {'prompt': 'a serene lake at dusk'}},
+)
+data = response.json()
+```
+
+</CodeGroup>
+
+## Scopes
+
+Every key has a single scope. Scopes are cumulative — a higher scope inherits access to all endpoints that a lower scope can reach.
+
+| Scope | Plan tier | Capabilities | Rate limit |
+|-------|-----------|--------------|------------|
+| `admin` | Business / Enterprise | Run any registry model; create, update, and delete workflows; call the single-model endpoint | 1,000 req/min |
+| `deployment` | Pro | Run deployed workflows; read workflow schemas | 100 req/min |
+| `free` | Free | Run your own deployed workflows | 10 req/min |
+
+When you create a key as a Pro user, the maximum scope you can assign is `deployment`. Business and Enterprise users can assign up to `admin`. Platform administrators can assign any scope to any key.
+
+## Error responses
+
+### Missing or invalid key — 401
+
+If your key is absent, malformed, or has been revoked, the API returns:
+
+```json
+{ "error": "Unauthorized" }
+```
+
+Check that the `x-api-key` header is present and that the key has not been deleted from your Settings page.
+
+### Scope too low — 403 SCOPE_DENIED
+
+If your key's scope is below what the endpoint requires, you receive a `403` with the `SCOPE_DENIED` code plus the scopes involved:
+
+```json
+{
+  "error": "Insufficient scope",
+  "code": "SCOPE_DENIED",
+  "required": "admin",
+  "actual": "deployment"
+}
+```
+
+Use the `required` field to determine which plan you need to upgrade to in order to access that endpoint.
