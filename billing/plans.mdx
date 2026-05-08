@@ -1,20 +1,24 @@
 ---
-title: "Compare Knouds plans: Free, Pro, Business, Enterprise"
+title: "Compare Knouds plans: Free, Creator, Pro, Business"
 description: "Understand what each Knouds tier includes — credits, model access, API capabilities, the Business application process, and how to upgrade."
 ---
 
-Knouds organizes access to models and features through four tiers: Free, Pro, Business, and Enterprise. Each tier gives you a credit allowance you spend when running pipelines, plus controls which models you can reach and which API capabilities your keys can grant. This page explains what each tier includes and how to move between them.
+Knouds organizes access to models and features through four self-serve tiers (Free, Creator, Pro, Business) plus a custom Enterprise contract. Each tier gives you a credit allowance you spend when running pipelines, plus controls which models you can reach and which API capabilities your keys can grant. This page explains what each tier includes and how to move between them.
 
 ## Plan comparison
 
 | Plan | Credits | Models | API access |
 |------|---------|--------|------------|
 | **Free** | 250 lifetime credits + trial grants | Standard models, trial-gated access | Canvas only (no external API) |
-| **Pro** | Monthly allowance | All standard models | `workflow:run/read/write` + per-flow allowlist + `webhook:receive`. 100 req/min. |
-| **Business** | Higher monthly allowance | All models, including Seedance 2.0 | + `model:run` + per-model allowlist + `agent:invoke`. 1,000 req/min. |
-| **Enterprise** | Custom (unlimited) | All models, custom configuration | Same as Business. Unlimited rate limit. |
+| **Creator** | 1,700 credits / month | Standard models | Canvas only (no external API) |
+| **Pro** | 5,000 credits / month | All standard models | `workflow:run/read/write` + per-flow allowlist + `webhook:receive`. 100 req/min. |
+| **Business** | 11,329 credits / month | All models, including Seedance 2.0 | + `model:run` + per-model allowlist + `agent:invoke`. 1,000 req/min. |
 
-Credits refresh at the start of each billing cycle. They do not roll over — unused credits from one period are replaced by the new period's allowance.
+Pro and Business credits refresh on each billing cycle. Creator credits refresh monthly. Free credits are a one-time lifetime grant. Credits do not roll over — unused credits from one period are replaced by the new period's allowance.
+
+<Note>
+**Enterprise** is available as a custom contract for high-volume teams. It includes unlimited rate limits, custom credit allowances, and dedicated support. Contact us at [knouds.ai](https://knouds.ai) to discuss.
+</Note>
 
 ## The Free tier and trial grants
 
@@ -33,7 +37,7 @@ The exact number of free runs and which models are trial-gated is shown in the m
 
 ## Monthly credit refresh on paid plans
 
-On Pro, Business, and Enterprise, your credit balance is reset to your plan's allowance each time your subscription renews. The renewal is handled automatically via Stripe. You can see the date of your last refresh in **Settings → Billing**.
+On Creator, Pro, Business, and Enterprise, your credit balance is reset to your plan's allowance each time your subscription renews. The renewal is handled automatically via Stripe. You can see the date of your last refresh in **Settings → Billing**.
 
 If you are on an annual plan, you receive a credit bonus compared to the monthly rate. The exact bonus is shown at checkout.
 
@@ -63,6 +67,7 @@ The API keys you create in the [Developer Dashboard](https://knouds.ai/app/api/k
 | Tier | API key ceiling |
 |------|-----------------|
 | Free | (empty — no external API access by product design) |
+| Creator | (empty — canvas only, no external API) |
 | Pro | `workflow:run`, `workflow:read`, `workflow:write`, `workflow:<slug>:run`, `webhook:receive` |
 | Business / Enterprise | + `model:run`, `model:<id>:run`, `agent:invoke` |
 
