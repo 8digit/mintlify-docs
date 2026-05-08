@@ -86,3 +86,4 @@ To avoid future breaking changes:
 - **Don't assume cumulative capabilities** — `model:run` does NOT imply `workflow:write` (capabilities are orthogonal).
 - **Handle `LEGACY_KEY_RETIRED` explicitly** — surface a clear "regenerate at /app/api/keys" message in your CI/dashboard.
 - **Pin to specific resources when possible** — `workflow:my-flow:run` and `model:gpt-image-2:run` are immune to future broad-cap deprecations.
+

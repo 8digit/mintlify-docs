@@ -183,3 +183,4 @@ Use this to verify your signature verification works before pointing real produc
 - **HTTPS required in production** — `http://` URLs are rejected unless `NODE_ENV !== 'production'` AND the URL is non-loopback (i.e. dev only).
 - **`signingSecret` is a privacy boundary** — never returned in any list endpoint; only the per-key GET endpoint returns it (browser session, owner-only).
 - **`webhookSecret` excluded from `usage_log` SELECTs** — even admin queries don't surface it accidentally.
+

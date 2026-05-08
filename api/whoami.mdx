@@ -70,3 +70,4 @@ console.log(`Logged in as ${me.user.email} (tier: ${me.user.tier})`);
 
 - For richer identity (credit balance, top-up balance, business status, onboarding state) the session-only endpoint `/api/me` returns more fields. That endpoint requires a browser session cookie and rejects API keys.
 - A `401` response means the key is missing, revoked, or pre-Phase-11 (see [`LEGACY_KEY_RETIRED`](/api/errors)).
+
