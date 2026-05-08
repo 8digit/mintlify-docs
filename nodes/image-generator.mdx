@@ -1,18 +1,19 @@
 ---
 title: "Image Generator node: AI image generation"
-description: "Run AI image models like Seedream V5 and nano-banana-2 in your pipeline. Configure aspect ratio, resolution, count, and reference images."
+description: "Run AI image models like Nano Banana 2, Seedream V5 Lite, and GPT Image 2 in your pipeline. Configure aspect ratio, resolution, count, and reference images."
 ---
 
 The Image Generator node runs an AI image model and produces one or more images as output. You can connect it to a Request Input to make your prompt dynamic, chain it with an Assistant to craft prompts automatically, and wire its output to a Response Output to expose the result through your workflow's API.
 
 ## Available models
 
-The model picker on the node lists all available image models. Two models are available out of the box:
+The model picker on the node lists every enabled image model. Three models are available by default:
 
-- **nano-banana-2** — a fast, general-purpose model suitable for most image generation tasks
-- **Seedream V5** — a high-quality model with more detailed output
+- **Nano Banana 2** — a fast, general-purpose model suitable for most image generation tasks
+- **Seedream V5 Lite** — high-quality model with more detailed output
+- **GPT Image 2** — OpenAI's image model accessible via the registry (Business+ tier)
 
-Your workspace administrator can add more models through the Node Builder. The picker always reflects what is currently enabled.
+Your workspace administrator can add more models through the Node Builder. The picker always reflects what is currently enabled in your workspace.
 
 ## Input sockets
 

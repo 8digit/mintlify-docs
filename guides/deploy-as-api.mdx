@@ -35,13 +35,17 @@ The workflow executes server-side — all model credentials stay on Knouds serve
   </Step>
 
   <Step title="Generate an API key">
-    Go to **Settings → API Keys** and click **Create key**.
+    Open the [Developer Dashboard](https://knouds.ai/app/api/keys) (or **Settings → API Keys**, which redirects). Click **Create Key** and pick a preset:
 
-    Give the key a name (for example, "Production integration") and choose a scope:
+    - **Workflow Deploy** — `workflow:run` + `workflow:read`. The right preset for most production integrations.
+    - **Read-only** — `workflow:read` only. Useful for audit/monitoring keys.
+    - **Webhook receiver** — `webhook:receive`. Use when configuring outbound webhook delivery for `?async=true` runs.
+    - **Full deploy** — `workflow:run` + `workflow:read` + `workflow:write`. Adds the ability to create/update/delete workflows via API.
+    - **Custom** — pick exact capabilities (per-flow allowlist via `workflow:<slug>:run`, per-model allowlist via `model:<id>:run`, etc.).
 
-    - **`deployment`** — run deployed workflows and read their schemas. Default for Pro accounts. Use this for most integrations.
-    - **`admin`** — additionally create, update, and delete workflows, and call single-model endpoints. Default for Business and Enterprise accounts.
-    - **`free`** — run your own deployed workflows only. Default for Free accounts.
+    <Warning>
+    Free tier cannot create usable API keys — the Free API key ceiling is empty by product design. Upgrade to **Pro** to unlock key creation. Creator tier is canvas only and also cannot create API keys.
+    </Warning>
 
     Copy the key immediately — it is shown only once. Store it securely (see [Create and manage API keys](/guides/api-keys)).
   </Step>
@@ -96,15 +100,15 @@ X-RateLimit-Remaining: 87
 X-RateLimit-Reset: 1714512000
 ```
 
-`X-RateLimit-Reset` is a Unix epoch timestamp indicating when the current window resets. Limits by scope:
+`X-RateLimit-Reset` is a Unix epoch timestamp indicating when the current window resets. Limits by tier:
 
-| Scope | Requests per minute |
+| Tier | Requests per minute |
 |---|---|
-| `free` | 10 |
-| `deployment` (Pro) | 100 |
-| `admin` (Business / Enterprise) | 1000 |
+| Pro | 100 |
+| Business | 1,000 |
+| Enterprise | unlimited |
 
-When you exceed the limit, the API returns `429` with a `Retry-After` header (in seconds) telling you when to resume.
+Free and Creator tiers do not have external API access — only Pro+ keys are subject to (and reach) these limits. When you exceed the limit, the API returns `429 RATE_LIMIT_EXCEEDED` with a `Retry-After` header (in seconds) telling you when to resume.
 
 ## Sharing a workflow publicly
 

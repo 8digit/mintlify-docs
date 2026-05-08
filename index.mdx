@@ -36,7 +36,7 @@ Knouds is built around three ideas: **nodes**, **workflows**, and **deployments*
     Drag nodes from the sidebar, connect them with wires, and configure each node's settings. Add a **Request Input** node to define the inputs your API callers will provide.
   </Step>
   <Step title="Generate your API key">
-    Go to **Settings → API Keys** and create a key. Copy it — it shows once.
+    Open the [Developer Dashboard](https://knouds.ai/app/api/keys), click **Create Key**, and pick a preset (Read-only / Workflow Deploy / Webhook receiver / Full deploy). Copy the plaintext value — it's shown once. Pro tier or higher is required to create usable keys.
   </Step>
   <Step title="Call your workflow">
     Send a `POST` request to `https://knouds.ai/api/workflows/your-workflow-slug/run` with your inputs in the body and your API key in the `x-api-key` header.

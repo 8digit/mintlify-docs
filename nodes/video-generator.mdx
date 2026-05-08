@@ -7,13 +7,23 @@ The Video Generator node runs an AI video model and produces a video as output. 
 
 ## Available models
 
-The model picker lists all enabled video models in your workspace. Two models are available by default:
+The model picker lists every enabled video model in your workspace. Seven models are available by default, organized into two model families:
 
-- **Kling V3** — a text-to-video and image-to-video model. Three variants are available depending on the motion style you need.
-- **Seedance 2.0** — a high-quality model for image-to-video and text-to-video workflows.
+**Seedance 2.0** family — high-quality text-to-video and image-to-video, multi-mode (UGC, lipsync, first-last-frame, etc.)
+
+- **Seedance 2.0 Full Access** — the full-featured variant with every mode unlocked
+- **Seedance 2 Fast** — optimized for speed
+- **Seedance 2.0** — the base variant
+
+**Kling V3 / V2.5** family — image-to-video and motion control:
+
+- **Kling V3 Pro I2V** — image-to-video
+- **Kling Video v2.5 Turbo Pro** — fast turbo variant
+- **Kling V3 Motion** — motion control
+- **Kling O3 Pro Ref2V** — reference-to-video with style + character refs
 
 <Note>
-Seedance 2.0 requires a **Business tier** subscription. Workflows that include a Seedance 2.0 node show a lock badge on the template card if your account is on a lower tier.
+Seedance 2.0 variants require a **Business tier** subscription. Workflows that include any Seedance 2.0 node show a lock badge on the template card if your account is on a lower tier. Kling models are available on Pro+.
 </Note>
 
 Your workspace administrator can add more video models through the Node Builder.
