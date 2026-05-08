@@ -3,7 +3,7 @@ title: "Async executions and polling"
 description: "Submit long-running model + workflow invocations with ?async=true, poll their status, and cancel in-flight runs."
 ---
 
-Long-running model and workflow invocations can opt into **async mode** by appending `?async=true` to the run endpoint. The submit returns in <500ms with an `executionId`; you then either poll `GET /api/executions/:id` or receive a webhook callback when the run completes.
+Long-running model and workflow invocations can opt into **async mode** by appending `?async=true` to the run endpoint. The submit returns in under 500ms with an `executionId`; you then either poll `GET /api/executions/:id` or receive a webhook callback when the run completes.
 
 This page documents the async lifecycle. For webhook-based delivery, see [Webhooks](/api/webhooks).
 
@@ -34,7 +34,7 @@ curl -X POST "https://knouds.ai/api/models/seedance-2-0-full-access/run?async=tr
   -d '{"inputs":{"prompt":"...","duration":"5","type":"text-to-video"}}'
 ```
 
-Response (returns in <500ms):
+Response (returns in under 500ms):
 
 ```json
 {

@@ -96,7 +96,7 @@ Total execution time in milliseconds, measured from the moment the server receiv
 
 ## Async opt-in (`?async=true`)
 
-For long-running pipelines you can append `?async=true` to submit the workflow without blocking. The response returns in <500ms with an `executionId`; poll [`GET /api/executions/:id`](/api/async-executions) or receive a webhook callback when the run completes.
+For long-running pipelines you can append `?async=true` to submit the workflow without blocking. The response returns in under 500ms with an `executionId`; poll [`GET /api/executions/:id`](/api/async-executions) or receive a webhook callback when the run completes.
 
 ```bash
 curl -X POST "https://knouds.ai/api/workflows/my-thumbnail-pipeline/run?async=true" \

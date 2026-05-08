@@ -65,7 +65,7 @@ Execution time in milliseconds from request receipt to response.
 
 ## Async opt-in (`?async=true`)
 
-Append `?async=true` to submit the model run without blocking. Response returns in <500ms with an `executionId`. Supported on HTTP+polling defs (Seedance, Suno, gpt-image-2). Fal-backed and Anthropic-backed defs return `400 ASYNC_NOT_SUPPORTED`.
+Append `?async=true` to submit the model run without blocking. Response returns in under 500ms with an `executionId`. Supported on HTTP+polling defs (Seedance, Suno, gpt-image-2). Fal-backed and Anthropic-backed defs return `400 ASYNC_NOT_SUPPORTED`.
 
 ```bash
 curl -X POST "https://knouds.ai/api/models/seedance-2-0-full-access/run?async=true" \
