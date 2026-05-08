@@ -1,6 +1,6 @@
 ---
 title: "Run a single registered model directly via API"
-description: "Invoke any enabled registry model directly by internalName without a workflow — available to Business and Enterprise API key holders with admin scope."
+description: "Invoke any enabled registry model directly by internalName without a workflow — available to Business+ API keys with model:run capability."
 ---
 
 Use this endpoint to run a single registry-defined model directly, without wrapping it in a workflow. You provide the model's `internalName` and a set of field inputs, and Knouds executes the model and returns the result.
@@ -8,7 +8,7 @@ Use this endpoint to run a single registry-defined model directly, without wrapp
 This endpoint is designed for advanced automation where you want to call a specific model — such as a custom image generator or an LLM — without the overhead of deploying a full workflow.
 
 <Note>
-This endpoint requires **admin scope**, which is available on Business and Enterprise plans. Pro and Free keys receive a `403 SCOPE_DENIED` response. If you are on a lower plan, use [POST /api/workflows/:slug/run](/api/run-workflow) with a deployed workflow instead.
+This endpoint requires capability `model:run` (any model) or `model:<internalName>:run` (specific model only). Both are available to Business and Enterprise tiers. Pro and Free keys cannot grant these capabilities and receive `403 CAPABILITY_DENIED`. If you are on Pro, use [`POST /api/workflows/:slug/run`](/api/run-workflow) with a deployed workflow that wraps the model.
 </Note>
 
 ## Endpoint
@@ -19,72 +19,79 @@ POST /api/models/:internalName/run
 
 ## Authentication
 
-Admin scope required. Pass your Business or Enterprise API key in the `x-api-key` header.
+Capability `model:run` (any registry model) or `model:<internalName>:run` (specific model only). Pass your Business+ API key in the `x-api-key` header.
 
-## Rate limits
-
-Admin-scoped keys are subject to the 1000 req/min limit. The same `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers returned by the workflow run endpoint are also present on responses from this endpoint.
+Business+ keys are subject to the 1,000 req/min rate limit (Enterprise unlimited). The same `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers returned by the workflow run endpoint are also present here.
 
 ## Path parameters
 
 <ParamField path="internalName" type="string" required>
-  The model's internal slug. You can find this in the **Node Builder** admin panel — it is the identifier shown under the model's name. For example: `seedance-2-i2v`, `gpt-image-2`.
-
-  Slugs are lowercase letters, digits, and hyphens. The value must match an enabled registry model. Not all model names work — see the registry-only scope section below.
+The model's internal slug. You can find this in the Node Builder admin panel — it is the identifier shown under the model's name. For example: `seedance-2-0-full-access`, `gpt-image-2`, `nano-banana-2`, `kling-v3-i2v`. Slugs are lowercase letters, digits, and hyphens. The value must match an enabled registry model.
 </ParamField>
 
 ## Request body
 
 <ParamField body="inputs" type="object" required>
-  Key/value pairs matching the model's field schema as configured in Node Builder. The accepted field names map directly to the parameters the underlying provider expects.
-
-  ```json
-  {
-    "inputs": {
-      "<field-name>": "<value>"
-    }
-  }
-  ```
-
-  Omitting `inputs` entirely, or passing a non-object value, returns `400 INVALID_INPUTS`.
+Key/value pairs matching the model's field schema as configured in Node Builder. The accepted field names map directly to the parameters the underlying provider expects.
 </ParamField>
 
-## Response
+```json
+{
+  "inputs": {
+    "<field-name>": "<value>"
+  }
+}
+```
+
+Omitting `inputs` entirely, or passing a non-object value, returns `400 INVALID_INPUTS`.
+
+## Response (sync — 200)
 
 <ResponseField name="success" type="boolean">
-  Always `true` on a 200 response.
+Always `true` on a 200 response.
 </ResponseField>
 
 <ResponseField name="result" type="object">
-  The model's output. The shape depends on the model type. Common structures include `images`, `videos`, `audios`, and `text` arrays or strings. Media URLs point to S3-hosted files on the `knouds-media` bucket.
+The model's output. The shape depends on the model type. Common structures include `images`, `videos`, `audios`, and `text` arrays or strings. Media URLs point to S3-hosted files on the `knouds-media` bucket.
 </ResponseField>
 
 <ResponseField name="cost" type="number">
-  Credits deducted from your account balance for this run. If the run consumed a trial grant instead of your credit balance, this value is `0`.
+Credits deducted from your account balance for this run. If the run consumed a trial grant instead of your credit balance, this value is `0`.
 </ResponseField>
 
 <ResponseField name="ms" type="number">
-  Execution time in milliseconds from request receipt to response.
+Execution time in milliseconds from request receipt to response.
 </ResponseField>
 
-## Registry-only scope
+## Async opt-in (`?async=true`)
 
-This endpoint only exposes **registry-defined** models — models your workspace administrator has configured and enabled in Node Builder. Built-in models that come with the canvas (such as nano-banana-2, Seedream V5, Kling V3, and Claude Sonnet) are **not** accessible via this endpoint.
+Append `?async=true` to submit the model run without blocking. Response returns in <500ms with an `executionId`. Supported on HTTP+polling defs (Seedance, Suno, gpt-image-2). Fal-backed and Anthropic-backed defs return `400 ASYNC_NOT_SUPPORTED`.
 
-<Note>
-To run built-in canvas models, build a workflow that includes the relevant Image Generator, Video Generator, or Assistant node and call it via [POST /api/workflows/:slug/run](/api/run-workflow).
-</Note>
+```bash
+curl -X POST "https://knouds.ai/api/models/seedance-2-0-full-access/run?async=true" \
+  -H "x-api-key: $KNOUDS_KEY" -H "Content-Type: application/json" \
+  -d '{"inputs":{"prompt":"...","duration":"5","type":"text-to-video"}}'
+# → {"_async":true,"executionId":"<uuid>","requestId":"<provider-id>","status":"processing","pollUrl":"/api/executions/<uuid>"}
+```
 
-## Error responses
+See [Async executions](/api/async-executions) for the full lifecycle (poll + cancel + webhook delivery).
+
+## Registry coverage
+
+Every enabled model in your Node Builder catalog is reachable here, **including the formerly-native ones**: nano-banana-2, seedream-v5, kling-v3-i2v, kling-o3-ref2v, kling-v3-motion, claude-sonnet. Phase 10 (v4.7.0) unified all execution behind the registry — no model is fenced off.
+
+## Errors
 
 | Status | Code | Meaning |
 |---|---|---|
 | `400` | `INVALID_INPUTS` | `inputs` is missing, not an object, or contains invalid values. |
 | `400` | `INVALID_SLUG` | The `internalName` path parameter is not a valid slug. |
-| `402` | `grant_exhausted` | Your trial grant for this model has been used up. Upgrade to continue. |
-| `403` | `SCOPE_DENIED` | Your key does not have admin scope. The response includes `required` and `actual` scope fields. |
+| `400` | `ASYNC_NOT_SUPPORTED` | `?async=true` on a provider that doesn't support polling. Use sync mode. |
+| `402` | `INSUFFICIENT_CREDITS` | Out of credits. Top up to continue. |
+| `402` | `grant_exhausted` | Trial grant exhausted. Upgrade your tier. |
+| `403` | `CAPABILITY_DENIED` | Key lacks `model:run` (or the per-model `model:<id>:run`). |
 | `403` | `MODEL_TIER_REQUIRED` | The model requires a higher plan tier than your account holds. |
-| `404` | `MODEL_NOT_FOUND` | No enabled, non-native registry model exists with the given `internalName`. |
+| `404` | `MODEL_NOT_FOUND` | No enabled registry model exists with the given `internalName`. |
 | `429` | `RATE_LIMIT_EXCEEDED` | Per-minute limit exceeded. Check `Retry-After`. |
 | `500` | `EXECUTION_FAILED` | The provider call failed. The `error` field describes the cause. |
 
@@ -93,49 +100,46 @@ To run built-in canvas models, build a workflow that includes the relevant Image
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://knouds.ai/api/models/seedance-2-i2v/run \
+curl -X POST https://knouds.ai/api/models/seedance-2-0-full-access/run \
   -H "x-api-key: $KNOUDS_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"inputs":{"prompt":"midnight neon street","aspect_ratio":"16:9"}}'
+  -d '{"inputs":{"prompt":"midnight neon street","duration":"5","type":"text-to-video"}}'
 ```
 
 ```python Python
 import os, requests
 
 response = requests.post(
-    "https://knouds.ai/api/models/seedance-2-i2v/run",
+    'https://knouds.ai/api/models/seedance-2-0-full-access/run',
     headers={
-        "x-api-key": os.environ["KNOUDS_KEY"],
-        "Content-Type": "application/json",
+        'x-api-key': os.environ['KNOUDS_KEY'],
+        'Content-Type': 'application/json',
     },
-    json={"inputs": {"prompt": "midnight neon street", "aspect_ratio": "16:9"}},
+    json={'inputs': {'prompt': 'midnight neon street', 'duration': '5', 'type': 'text-to-video'}},
 )
 data = response.json()
-print(data["result"])
-print(f"Cost: {data['cost']} credits — ran in {data['ms']}ms")
 ```
 
 ```javascript Node.js
 const response = await fetch(
-  "https://knouds.ai/api/models/seedance-2-i2v/run",
+  'https://knouds.ai/api/models/seedance-2-0-full-access/run',
   {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "x-api-key": process.env.KNOUDS_KEY,
-      "Content-Type": "application/json",
+      'x-api-key': process.env.KNOUDS_KEY,
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      inputs: { prompt: "midnight neon street", aspect_ratio: "16:9" },
+      inputs: { prompt: 'midnight neon street', duration: '5', type: 'text-to-video' },
     }),
   }
 );
 const data = await response.json();
-console.log(data.result);
 ```
 
 </CodeGroup>
 
-**Example response:**
+Example response:
 
 ```json
 {

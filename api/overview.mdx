@@ -3,7 +3,7 @@ title: "Knouds REST API: endpoints, auth, and response format"
 description: "A complete reference to the Knouds REST API — base URL, authentication, available endpoints, and what you need to know before your first call."
 ---
 
-The Knouds REST API lets you run deployed workflows, inspect their input schemas, list your workflows, and — on Business or Enterprise plans — invoke individual registry models and manage workflow definitions programmatically. Every request and response uses JSON over HTTPS.
+The Knouds REST API lets you run deployed workflows, invoke individual registry models, manage workflow definitions, and poll async executions programmatically. Every request and response uses JSON over HTTPS.
 
 ## Base URL
 
@@ -13,7 +13,7 @@ All endpoints are served from:
 https://knouds.ai
 ```
 
-There is no version prefix in the URL. The current stable surface is the v4.7+ contract. Additive changes (new optional fields, new endpoints) roll out continuously without versioning. Breaking changes ship with a major-version entry in the changelog.
+There is no version prefix in the URL. The current stable surface is the **v4.13+ contract** (Phase 11 capabilities + Phase 12 dashboard + Phase 13 async/webhooks). Additive changes (new optional fields, new capabilities, new endpoints) roll out continuously without versioning. Breaking changes ship with a major-version entry in the changelog.
 
 ## Request format
 
@@ -21,14 +21,14 @@ Set `Content-Type: application/json` on every request that includes a body. Endp
 
 ## Authentication
 
-Every API endpoint requires a valid API key passed in the `x-api-key` request header. Keys are generated in **Settings → API Keys** in your account dashboard.
+Every API endpoint requires a valid API key passed in the `x-api-key` request header. Keys are generated in the [Developer Dashboard](https://knouds.ai/app/api/keys) (or **Settings → API Keys**, which redirects there).
 
 ```bash
-curl https://knouds.ai/api/workflows \
+curl https://knouds.ai/api/whoami \
   -H "x-api-key: YOUR_KEY"
 ```
 
-See [Authentication](/api/authentication) for the full guide on key scopes and how to handle `401` and `403` responses.
+See [Authentication](/api/authentication) for the full guide on capabilities, presets, and how to handle `401` and `403` responses.
 
 ## Response format
 
@@ -40,21 +40,63 @@ All responses — including errors — are JSON objects. Successful responses va
 
 Some error codes include additional context fields. See [Error codes](/api/errors) for the complete reference.
 
-## Endpoints
+## Available endpoints
 
-| Method | Path | Scope required | Description |
-|--------|------|----------------|-------------|
-| `POST` | `/api/workflows/:slug/run` | any authenticated | Run a deployed workflow |
-| `GET` | `/api/workflows/:slug/schema` | any authenticated | Get a workflow's input schema |
-| `GET` | `/api/workflows` | any authenticated | List your workflows |
-| `POST` | `/api/models/:internalName/run` | `admin` | Run a single registry model |
-| `POST` | `/api/workflows` | `admin` | Create a workflow |
-| `PUT` | `/api/workflows/:slug` | `admin` | Update a workflow |
-| `DELETE` | `/api/workflows/:slug` | `admin` | Delete a workflow |
-| `GET` | `/api/pricing/public` | none | Fetch public pricing and tier information |
+Capabilities below are the **minimum** required. A key with `*` (admin-only) passes everything.
 
-The `admin` scope is available to Business and Enterprise plan holders. See [Authentication](/api/authentication) for the full scope table.
+### Identity
+
+| Method | Path | Capability | Description |
+|---|---|---|---|
+| `GET` | `/api/whoami` | (any authenticated) | Identity + tier — pre-flight check that your key is valid |
+
+### Workflows
+
+| Method | Path | Capability | Description |
+|---|---|---|---|
+| `POST` | `/api/workflows/:slug/run` | `workflow:run` or `workflow:<slug>:run` | Run a deployed workflow synchronously |
+| `POST` | `/api/workflows/:slug/run?async=true` | same + optional `webhook:receive` | [Submit async](/api/async-executions); returns `executionId` immediately |
+| `GET` | `/api/workflows/:slug/schema` | `workflow:read` | Get a workflow's input schema |
+| `GET` | `/api/workflows/:slug/public-schema` | none | Public schema (only when `publicPlayground: true`) |
+| `GET` | `/api/workflows` | `workflow:read` | List your workflows |
+| `GET` | `/api/workflows/:slug` | `workflow:read` | Full workflow JSON |
+| `POST` | `/api/workflows` | `workflow:write` | Create a workflow (Free capped at 1) |
+| `PUT` | `/api/workflows/:slug` | `workflow:write` (+ ownership) | Update |
+| `PUT` | `/api/workflows/:slug/move` | `workflow:write` (+ ownership) | Change folder |
+| `DELETE` | `/api/workflows/:slug` | `workflow:write` (+ ownership) | Delete |
+
+### Models (Business+)
+
+| Method | Path | Capability | Description |
+|---|---|---|---|
+| `POST` | `/api/models/:internalName/run` | `model:run` or `model:<internalName>:run` | Run any registry model — including the formerly-native ones (nano-banana-2, seedream-v5, kling-v3-i2v, kling-o3-ref2v, kling-v3-motion, claude-sonnet) |
+| `POST` | `/api/models/:internalName/run?async=true` | same | Submit async on polling-supported defs (Seedance, Suno, gpt-image-2) |
+
+### Executions (every tier)
+
+| Method | Path | Capability | Description |
+|---|---|---|---|
+| `GET` | `/api/executions/:id` | `execution:read` | Poll an async execution |
+| `POST` | `/api/executions/:id/cancel` | `execution:cancel` | Cancel an in-flight execution (always-charge policy) |
+
+### Usage
+
+| Method | Path | Capability | Description |
+|---|---|---|---|
+| `GET` | `/api/usage` | (any authenticated) | Your own API usage rows (canvas runs filtered out) |
+| `GET` | `/api/usage/models` | (any authenticated) | Distinct model IDs in your usage history |
+
+### Public
+
+| Method | Path | Capability | Description |
+|---|---|---|---|
+| `GET` | `/api/pricing/public` | none | Public pricing and tier information |
+| `GET` | `/api/health` | none | Health check |
 
 <Note>
-Your account must be approved before any API access is granted. If your requests return `401`, check that your account has been approved in addition to verifying your API key.
+Account approval is required before any API access is granted. If your requests return `401` and your key is valid, check that your account is approved in addition to verifying the key.
+</Note>
+
+<Note>
+Some session-only endpoints (`/api/me`, `/api/credits/*`, `/api/api-keys/*`, `/api/business/admin/*`) are not reachable with API keys by design (defense-in-depth on key + account management). Use the [Developer Dashboard](https://knouds.ai/app/api) for those operations.
 </Note>

@@ -1,0 +1,72 @@
+---
+title: "GET /api/whoami — identity check"
+description: "Return the authenticated user's identity (id, email, role, tier, approved). Use as a pre-flight check before invoking expensive runs."
+---
+
+Returns the identity of the authenticated user. Useful as a pre-flight check that your API key is valid and to inspect tier-gated capabilities before invoking expensive runs.
+
+## Endpoint
+
+```
+GET /api/whoami
+```
+
+## Authentication
+
+Works with both session cookie and API key auth. Any authenticated request — no specific capability required.
+
+## Response
+
+```json
+{
+  "user": {
+    "id": "u_abc123...",
+    "email": "you@example.com",
+    "role": "user",
+    "tier": "pro",
+    "approved": true
+  }
+}
+```
+
+<ResponseField name="user.id" type="string">The user's internal id.</ResponseField>
+<ResponseField name="user.email" type="string">The user's email address.</ResponseField>
+<ResponseField name="user.role" type="string">Either `user` or `admin`. Admin role bypasses tier gates and rate limits.</ResponseField>
+<ResponseField name="user.tier" type="string">One of `free`, `pro`, `business`, `enterprise`, or a custom tier id.</ResponseField>
+<ResponseField name="user.approved" type="boolean">Whether the account is approved. New accounts go through a brief approval step before they can run workflows.</ResponseField>
+
+## Use cases
+
+- **Pre-flight validation** — call this before any expensive workflow run to confirm your key works without paying for a real execution.
+- **Tier-aware routing** — branch your script depending on the tier (skip Business-only models if `user.tier === 'pro'`).
+- **CI smoke test** — assert `user.approved === true` and `user.email` matches the expected account before production deploys.
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl https://knouds.ai/api/whoami \
+  -H "x-api-key: $KNOUDS_KEY"
+```
+
+```python Python
+import os, requests
+me = requests.get('https://knouds.ai/api/whoami',
+                  headers={'x-api-key': os.environ['KNOUDS_KEY']}).json()
+print(f"Logged in as {me['user']['email']} (tier: {me['user']['tier']})")
+```
+
+```javascript Node.js
+const me = await fetch('https://knouds.ai/api/whoami', {
+  headers: { 'x-api-key': process.env.KNOUDS_KEY },
+}).then(r => r.json());
+console.log(`Logged in as ${me.user.email} (tier: ${me.user.tier})`);
+```
+
+</CodeGroup>
+
+## Notes
+
+- For richer identity (credit balance, top-up balance, business status, onboarding state) the session-only endpoint `/api/me` returns more fields. That endpoint requires a browser session cookie and rejects API keys.
+- A `401` response means the key is missing, revoked, or pre-Phase-11 (see [`LEGACY_KEY_RETIRED`](/api/errors)).

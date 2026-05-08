@@ -1,108 +1,87 @@
 ---
 title: "Create and manage API keys for Knouds"
-description: "Generate scoped API keys to authenticate programmatic requests to Knouds workflows and models, and learn how to store, rotate, and revoke them safely."
+description: "Generate Knouds API keys with capability presets, store them safely, rotate them periodically, and revoke compromised ones."
 ---
 
-API keys let you authenticate requests to Knouds from scripts, CI pipelines, and external applications — anywhere you cannot use a browser session. Each key carries a scope that limits what it can do, capped by your account tier.
+API keys let you authenticate requests to Knouds from scripts, CI pipelines, and external applications — anywhere you cannot use a browser session. Each key carries a SET of capabilities (orthogonal grants), capped by your account tier.
 
 <Warning>
-  The full key value is shown **only once**, immediately after creation. Copy it before closing the dialog. If you lose the key, you must delete it and generate a new one — there is no way to retrieve the original value.
+The full key value is shown **only once**, immediately after creation. Copy it before closing the dialog. If you lose the key, you must revoke it and generate a new one — there is no way to retrieve the original value.
 </Warning>
 
+## Where to manage keys
+
+Open the [Developer Dashboard](https://knouds.ai/app/api/keys) — you can also reach it from **Settings → API Keys**, which redirects. The dashboard lists every key you've created with its name, creation date, last-used time, and capability set.
+
+<Note>
+Free tier cannot create usable keys — Free's API key ceiling is empty. The dashboard shows an "API access requires Pro" upgrade CTA instead of the create-key form. Upgrade to Pro to unlock external API access.
+</Note>
+
+## Create a key
+
 <Steps>
-  <Step title="Go to Settings → API Keys">
-    Sign in to [knouds.ai](https://knouds.ai) and open **Settings** from the top navigation. Select the **API Keys** tab.
-
-    You will see a list of your existing keys, each showing its name, creation date, and scope badge.
+  <Step title="Click Create Key">
+    Pick a name that identifies where the key will be used — for example, `github-actions-deploy` or `mobile-app-production`.
   </Step>
 
-  <Step title="Click 'Create key'">
-    Click the **Create key** button. A dialog opens where you configure the new key.
-  </Step>
+  <Step title="Pick a preset (or Custom)">
+    The CapabilitySelector offers four presets that cover the common cases:
 
-  <Step title="Choose a name and scope">
-    Give the key a descriptive name that identifies where it will be used — for example, "GitHub Actions deploy" or "Mobile app production".
-
-    Then select a scope. Your available options are capped by your account tier:
-
-    | Scope | Default for | What you can do |
+    | Preset | Capabilities | Use for |
     |---|---|---|
-    | `admin` | Business / Enterprise | Run any model, create / update / delete workflows, call the single-model endpoint |
-    | `deployment` | Pro | Run deployed workflows, read workflow schemas |
-    | `free` | Free | Run your own deployed workflows |
+    | **Read-only** | `workflow:read` | Audit / monitoring / dashboards that only inspect |
+    | **Workflow Deploy** | `workflow:run` + `workflow:read` | Running deployed workflows from a CI/server |
+    | **Webhook receiver** | `webhook:receive` | Receiving outbound webhook deliveries (`?async=true` flow) |
+    | **Full deploy** | `workflow:run` + `workflow:read` + `workflow:write` | Full programmatic control of your workflows |
+    | **Custom** | (granular) | Pick exact capabilities — locked-flow keys via `workflow:<slug>:run`, locked-model keys via `model:<id>:run`, etc. |
 
-    Scopes are cumulative — `admin` includes everything `deployment` can do, and `deployment` includes everything `free` can do.
-
-    If you need a key with fewer permissions than your tier default (for example, a `deployment`-scoped key on a Business account), you can select the lower scope at creation time.
+    Capability options grayed out under **Custom** are above your tier's ceiling. Free tier has zero options. Pro can grant `workflow:*` + `webhook:receive`. Business+ adds `model:*` and `agent:invoke`.
   </Step>
 
-  <Step title="Copy the key immediately">
-    After clicking **Create**, the full key value is displayed once. Copy it now and store it in a secrets manager or environment variable.
-
-    The key starts with `knouds_live_` and is not retrievable after you close the dialog.
-  </Step>
-
-  <Step title="Use the key in your requests">
-    Pass the key in the `x-api-key` request header on every API call:
-
-    ```bash
-    curl -H "x-api-key: $KNOUDS_API_KEY" \
-      -H "Content-Type: application/json" \
-      https://knouds.ai/api/workflows/my-flow/run \
-      -X POST \
-      -d '{"inputs": {"prompt": "a mountain at dusk"}}'
-    ```
+  <Step title="Copy the plaintext value once">
+    The key is displayed once in a green banner with a Quick Start curl panel templated in. Copy and save it now — there's no way to retrieve it later.
   </Step>
 </Steps>
 
-## Code examples
+## Capabilities
 
-<CodeGroup>
+Capabilities are **orthogonal**, not cumulative. A key with `model:run` does NOT automatically get `workflow:write`. Grant exactly what your integration needs.
 
-```bash curl
-curl -X POST https://knouds.ai/api/workflows/my-flow/run \
-  -H "x-api-key: $KNOUDS_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"inputs": {"prompt": "a mountain at dusk"}}'
-```
+| Capability | What it admits |
+|---|---|
+| `workflow:run` | `POST /api/workflows/:slug/run` (any of your workflows) |
+| `workflow:<slug>:run` | `POST /api/workflows/<slug>/run` (specific slug only) |
+| `workflow:read` | `GET /api/workflows`, `:slug`, `:slug/schema` |
+| `workflow:write` | `POST/PUT/DELETE /api/workflows` (ownership-checked) |
+| `model:run` | `POST /api/models/:internalName/run` (any registry model — Business+) |
+| `model:<id>:run` | `POST /api/models/<id>/run` (specific model only) |
+| `webhook:receive` | Receive outbound webhook deliveries |
+| `execution:read` | `GET /api/executions/:id` (poll) |
+| `execution:cancel` | `POST /api/executions/:id/cancel` |
+| `agent:invoke` | (reserved for SSE / streaming, not yet shipped) |
 
-```javascript JavaScript (fetch)
-const res = await fetch('https://knouds.ai/api/workflows/my-flow/run', {
-  method: 'POST',
-  headers: {
-    'x-api-key': process.env.KNOUDS_API_KEY,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ inputs: { prompt: 'a mountain at dusk' } }),
-})
-const data = await res.json()
-```
+When the server resolves a request, it checks four things in order: exact match → resource-level wildcard (e.g. `workflow:*` matches `workflow:run`) → general-implies-specific (`workflow:run` admits `workflow:my-flow:run`) → pattern admission (`workflow:*:run` admits any per-flow check). See [API Reference → Authentication](/api/authentication#match-logic) for the full rule.
 
-```python Python (requests)
-import os, requests
+## Per-flow and per-model keys (least-privilege)
 
-resp = requests.post(
-    'https://knouds.ai/api/workflows/my-flow/run',
-    headers={'x-api-key': os.environ['KNOUDS_API_KEY']},
-    json={'inputs': {'prompt': 'a mountain at dusk'}}
-)
-print(resp.json())
-```
+Use Custom mode to lock a key to ONE workflow or ONE model:
 
-</CodeGroup>
+- A key with `workflow:my-thumbnail-pipeline:run` can ONLY run that specific flow. Calling `/api/workflows/anything-else/run` returns `403 CAPABILITY_DENIED`. Perfect for embedding in a single integration where one webhook URL = one key = one workflow scope.
+- A key with `model:gpt-image-2:run` can ONLY invoke that one model. Useful for CI keys that should never accidentally run an expensive video model.
 
-## Storing keys safely
+If the key is leaked, the blast radius is bounded to that single resource.
 
-Never hardcode an API key in source code or commit it to a repository. Instead, load it from an environment variable:
+## Store keys safely
 
-```bash
-export KNOUDS_API_KEY="knouds_live_abc..."
-```
+- Use a secrets manager (1Password, AWS Secrets Manager, Vercel env vars). **Never commit keys to git.**
+- Don't paste keys into chat tools, screenshots, or shared Slack channels.
+- Set a calendar reminder to rotate keys every 90 days for high-traffic integrations.
+- If a key is compromised, revoke it immediately from the [Developer Dashboard](https://knouds.ai/app/api/keys).
 
-In CI/CD systems (GitHub Actions, CircleCI, etc.), add `KNOUDS_API_KEY` as a secret in your repository settings and reference it in your workflow file.
+## Revoke a key
 
-## Revoking a key
+In the Developer Dashboard, find the key and click **Revoke**. Revocation is immediate — subsequent requests using that key return `401 Unauthorized`. There is no grace period; deploy a replacement key first if you need to swap without downtime.
 
-To revoke a key, go to **Settings → API Keys**, find the key in the list, and click **Delete**. The key is invalidated immediately — any request that uses it will receive a `401` response.
+## Pre-Phase-11 keys
 
-There is no way to temporarily disable a key without deleting it. If you suspect a key has been compromised, delete it and create a replacement.
+Keys created before May 2026 (the Phase 11 capability cutover) were retired by the migration. Any request using one returns `401 LEGACY_KEY_RETIRED`. See [Migration from scopes](/api/migration-from-scopes) for the mapping from old scopes to equivalent capability bundles.

@@ -1,15 +1,25 @@
 ---
-title: "Knouds API authentication: keys, scopes, and errors"
-description: "How to generate Knouds API keys, pass them in requests, and understand the scope system that controls which endpoints your key can reach."
+title: "Knouds API authentication: keys, capabilities, and errors"
+description: "How to generate Knouds API keys, pass them in requests, and understand the capability system that controls which endpoints your key can reach."
 ---
 
-Every Knouds API request must include a valid API key. Keys carry a **scope** that determines which endpoints you can call and how many requests per minute you are allowed. Understanding scopes before you start will save you from unexpected `403` responses.
+Every Knouds API request must include a valid API key. Each key carries a set of **capabilities** that determine which endpoints you can call. Capabilities are orthogonal — a key holds an explicit subset (mix and match by use case) rather than a single rank.
 
 ## Generating a key
 
-Go to **Settings → API Keys** in your Knouds account and create a new key. The full key value is shown exactly once at creation time — copy it immediately. If you lose it, you must revoke the key and generate a new one.
+Go to **Settings → API Keys** in your Knouds account (or the [Developer Dashboard](https://knouds.ai/app/api/keys)) and create a new key. The full key value is shown exactly once at creation time — copy it immediately. If you lose it, you must revoke the key and generate a new one.
 
-Your key's scope is set at creation and is capped by your account's plan tier. You cannot assign a scope above your tier ceiling.
+When you create a key, you pick a preset (or **Custom** for granular grants):
+
+| Preset | Capabilities granted |
+|--------|----------------------|
+| **Read-only** | `workflow:read` |
+| **Workflow Deploy** | `workflow:run`, `workflow:read` |
+| **Webhook receiver** | `webhook:receive` |
+| **Full deploy** | `workflow:run`, `workflow:read`, `workflow:write` |
+| **Custom** | Any subset capped by your tier ceiling (see below) |
+
+Free users **cannot create usable API keys** — Free tier has no external API access by product design. Pro+ unlocks key creation.
 
 ## Passing your key
 
@@ -59,41 +69,105 @@ data = response.json()
 
 </CodeGroup>
 
-## Scopes
+## Capability vocabulary
 
-Every key has a single scope. Scopes are cumulative — a higher scope inherits access to all endpoints that a lower scope can reach.
+| Capability | Reaches | Tier minimum to grant |
+|---|---|---|
+| `workflow:run` | `POST /api/workflows/:slug/run` (any flow you own) | Pro |
+| `workflow:read` | `GET /api/workflows`, `:slug`, `:slug/schema` | Pro |
+| `workflow:write` | `POST/PUT/DELETE /api/workflows` (ownership-checked) | Pro |
+| `workflow:<slug>:run` | `POST /api/workflows/<slug>/run` (specific flow only — useful for least-privilege CI keys) | Pro |
+| `model:run` | `POST /api/models/:internalName/run` (any registry model) | Business |
+| `model:<internalName>:run` | `POST /api/models/<internalName>/run` (specific model only) | Business |
+| `webhook:receive` | Receive outbound webhook deliveries (the `?async=true` flow). Per-key URL + signing-secret config is **session-only** at `/api/api-keys/:id/webhook`. | Pro |
+| `execution:read` | `GET /api/executions/:id` — poll your own async executions | every tier |
+| `execution:cancel` | `POST /api/executions/:id/cancel` — cancel your own in-flight executions | every tier |
+| `agent:invoke` | Reserved for SSE / streaming (not yet shipped) | Business |
 
-| Scope | Plan tier | Capabilities | Rate limit |
-|-------|-----------|--------------|------------|
-| `admin` | Business / Enterprise | Run any registry model; create, update, and delete workflows; call the single-model endpoint | 1,000 req/min |
-| `deployment` | Pro | Run deployed workflows; read workflow schemas | 100 req/min |
-| `free` | Free | Run your own deployed workflows | 10 req/min |
+Capabilities are **orthogonal**, not cumulative — a key with `model:run` does NOT automatically get `workflow:write`. Grant exactly what your integration needs.
 
-When you create a key as a Pro user, the maximum scope you can assign is `deployment`. Business and Enterprise users can assign up to `admin`. Platform administrators can assign any scope to any key.
+### Match logic
+
+`requireCapability(cap)` resolves with a 4-step check:
+
+1. Key has `*` (admin override) → pass
+2. Key has `cap` exactly → pass
+3. Key has `<resource>:*` matching `cap` (resource-level wildcard) → pass
+4. Required cap is `<resource>:<id>:<action>` AND key has `<resource>:<action>` (general implies specific) OR `<resource>:*:<action>` (pattern admission) → pass
+
+Otherwise → `403 CAPABILITY_DENIED`.
+
+A key with `workflow:run` passes `POST /api/workflows/anything/run` (general implies specific). A key with `workflow:my-flow:run` only passes that specific slug.
+
+## Tier ceiling
+
+A user can only grant capabilities up to their tier's ceiling. The server rejects above-ceiling grants with `403 CAPABILITY_ABOVE_CEILING`.
+
+| Tier | Can grant on API keys |
+|---|---|
+| Free | (nothing — no external API access) |
+| Pro | `workflow:run`, `workflow:read`, `workflow:write`, `workflow:<slug>:run`, `webhook:receive` |
+| Business | + `model:run`, `model:<internalName>:run`, `agent:invoke` |
+| Enterprise | (same as Business) |
 
 ## Error responses
 
 ### Missing or invalid key — 401
 
-If your key is absent, malformed, or has been revoked, the API returns:
-
 ```json
 { "error": "Unauthorized" }
 ```
 
-Check that the `x-api-key` header is present and that the key has not been deleted from your Settings page.
+Check that the `x-api-key` header is present and that the key has not been deleted from the dashboard.
 
-### Scope too low — 403 SCOPE_DENIED
-
-If your key's scope is below what the endpoint requires, you receive a `403` with the `SCOPE_DENIED` code plus the scopes involved:
+### Pre-Phase-11 key retired — 401
 
 ```json
 {
-  "error": "Insufficient scope",
-  "code": "SCOPE_DENIED",
-  "required": "admin",
-  "actual": "deployment"
+  "error": "API key retired by Phase 11 migration. Regenerate at https://knouds.ai/app/api/keys",
+  "code": "LEGACY_KEY_RETIRED"
 }
 ```
 
-Use the `required` field to determine which plan you need to upgrade to in order to access that endpoint.
+Keys created before May 2026 (the Phase 11 capability cutover) were retired. Generate a new key from the Developer Dashboard. See [Migration from scopes](/api/migration-from-scopes) for the mapping.
+
+### Capability denied — 403 CAPABILITY_DENIED
+
+If your key's capability set does not cover the endpoint, you receive a `403`:
+
+```json
+{
+  "error": "Insufficient capability",
+  "code": "CAPABILITY_DENIED",
+  "required": "workflow:run"
+}
+```
+
+Use the `required` field to know which capability would have passed. Either regenerate your key with broader capabilities (capped by your tier) or upgrade your tier.
+
+### Capability above ceiling — 403 CAPABILITY_ABOVE_CEILING
+
+If you try to grant a capability above your tier's ceiling at key creation time:
+
+```json
+{
+  "error": "Capability above your tier ceiling",
+  "code": "CAPABILITY_ABOVE_CEILING",
+  "attempted": "model:run"
+}
+```
+
+Upgrade your tier to Business+ or grant a lower-tier capability instead.
+
+### Free tier no API access — 403 API_KEY_ACCESS_DENIED
+
+Free tier users attempting to create an API key receive:
+
+```json
+{
+  "error": "API key access requires Pro or higher",
+  "code": "API_KEY_ACCESS_DENIED"
+}
+```
+
+Upgrade to Pro to unlock external API access.

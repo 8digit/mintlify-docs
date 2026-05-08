@@ -1,0 +1,88 @@
+---
+title: "Migration from scopes (Phase 11)"
+description: "Pre-May-2026 keys used a rank-based scope system. Phase 11 retired all those keys and replaced scopes with orthogonal capabilities. This page maps old scopes to new capability bundles."
+---
+
+In May 2026 Knouds replaced the rank-based scope system (`super_admin > admin > deployment > free`) with **orthogonal capabilities** (`workflow:run`, `model:run`, `webhook:receive`, etc.). All keys created before the migration were retired automatically. This page tells you what to do.
+
+## Symptom
+
+Any request using a pre-May-2026 key returns:
+
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{
+  "error": "API key retired by Phase 11 migration. Regenerate at https://knouds.ai/app/api/keys",
+  "code": "LEGACY_KEY_RETIRED"
+}
+```
+
+## Fix
+
+1. Visit the [Developer Dashboard](https://knouds.ai/app/api/keys)
+2. Click **Create Key**
+3. Pick a preset (Read-only / Workflow Deploy / Webhook receiver / Full deploy) or switch to **Custom** for granular grants
+4. Copy the new plaintext key (shown once at creation)
+5. Update your integration's `x-api-key` header
+
+## Mapping old scopes to new capability sets
+
+Pick the row matching your old key's scope to reproduce its access. You can also grant fewer capabilities for tighter security.
+
+| Old scope | New capabilities |
+|---|---|
+| `super_admin` | `*` (admin role only) |
+| `admin` | `model:run` + all Pro caps below |
+| `deployment` | `workflow:run`, `workflow:read`, `workflow:write` |
+| `free` | (no longer a thing — Free has no API access by Phase 11 design) |
+
+## Why the breaking change
+
+The rank-based scope hierarchy couldn't express common roadmap features cleanly:
+
+- **Read-only keys** for audit / monitoring (a subset of any tier, not a tier of its own)
+- **Per-key endpoint allowlists** (`model:gpt-image-2:run` only, locking a CI key to one model)
+- **Webhooks** and **streaming** — orthogonal to the workflow/model hierarchy
+- **Per-flow keys** (`workflow:my-flow:run`) for embedding one workflow into one external integration with bounded blast radius
+
+Capabilities express all four cleanly. Doing the refactor BEFORE shipping those features avoided a second breaking change later.
+
+## Free tier no longer has API access
+
+Pre-Phase-11, Free users could create a `free`-scope key with 10 req/min. Post-Phase-11, Free's API key ceiling is empty (`[]`) — Free users save and run workflows from the canvas via session, but cannot create programmatic keys.
+
+If you were on Free with a working API key before May 2026, you have two paths:
+
+1. **Use the canvas** for your workflows (browser session, no key needed). The canvas covers nearly all use cases.
+2. **Upgrade to Pro** to unlock API key creation. Pro keys can grant `workflow:run / read / write / <slug>:run / webhook:receive` and run at 100 req/min.
+
+## Capability vocabulary v1
+
+The current capability set (May 2026):
+
+| Capability | Tier minimum | Reaches |
+|---|---|---|
+| `workflow:run` | Pro | `POST /api/workflows/:slug/run` (any flow you own) |
+| `workflow:read` | Pro | `GET /api/workflows`, `:slug`, `:slug/schema` |
+| `workflow:write` | Pro | `POST/PUT/DELETE /api/workflows` (ownership-checked) |
+| `workflow:<slug>:run` | Pro | per-flow allowlist (specific slug only) |
+| `model:run` | Business | `POST /api/models/:internalName/run` (any registry model) |
+| `model:<id>:run` | Business | per-model allowlist |
+| `webhook:receive` | Pro | Receive outbound webhooks for `?async=true` runs |
+| `execution:read` | every tier | `GET /api/executions/:id` (poll) |
+| `execution:cancel` | every tier | `POST /api/executions/:id/cancel` |
+| `agent:invoke` | Business | (reserved for SSE / streaming, not yet shipped) |
+| `*` | admin role | super-admin override |
+
+See [Authentication](/api/authentication) for the full match logic, presets, and tier-ceiling table.
+
+## Future-proofing your integration
+
+To avoid future breaking changes:
+
+- **Don't hardcode scope strings** — use the latest CapabilitySelector preset names instead.
+- **Don't assume cumulative capabilities** — `model:run` does NOT imply `workflow:write` (capabilities are orthogonal).
+- **Handle `LEGACY_KEY_RETIRED` explicitly** — surface a clear "regenerate at /app/api/keys" message in your CI/dashboard.
+- **Pin to specific resources when possible** — `workflow:my-flow:run` and `model:gpt-image-2:run` are immune to future broad-cap deprecations.

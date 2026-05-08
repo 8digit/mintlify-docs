@@ -78,7 +78,15 @@
               "api/overview",
               "api/authentication",
               "api/rate-limits",
-              "api/errors"
+              "api/errors",
+              "api/migration-from-scopes"
+            ]
+          },
+          {
+            "group": "Identity & Usage",
+            "pages": [
+              "api/whoami",
+              "api/usage"
             ]
           },
           {
@@ -88,6 +96,13 @@
               "api/run-model",
               "api/workflow-crud",
               "api/workflow-schema"
+            ]
+          },
+          {
+            "group": "Async & Webhooks",
+            "pages": [
+              "api/async-executions",
+              "api/webhooks"
             ]
           }
         ]

@@ -1,68 +1,73 @@
 ---
 title: "Authenticate with the Knouds API"
-description: "Generate Knouds API keys in Settings, pass them via the x-api-key header, and understand scope tiers and rate limits for each plan."
+description: "Generate Knouds API keys in the Developer Dashboard, pass them via the x-api-key header, and understand the capability system that gates each endpoint."
 ---
 
-The Knouds API accepts two forms of authentication: session cookies when you're calling from a browser, and API keys when you're calling from scripts, CI pipelines, or external integrations. For programmatic access, API keys are the right choice.
+Knouds workflows and models are reachable from any external system through a REST API. To call the API, you generate a key, attach it to your requests with the `x-api-key` header, and your account must hold the right capabilities for the endpoint. This page covers each step end-to-end.
 
-## Generate an API key
+## Generate a key
+
+Sign in to [knouds.ai](https://knouds.ai) and open the [Developer Dashboard](https://knouds.ai/app/api/keys) (also accessible from **Settings → API Keys**, which redirects). Click **Create Key** and pick a preset:
+
+| Preset | Capabilities granted |
+|--------|----------------------|
+| **Read-only** | `workflow:read` |
+| **Workflow Deploy** | `workflow:run`, `workflow:read` |
+| **Webhook receiver** | `webhook:receive` |
+| **Full deploy** | `workflow:run`, `workflow:read`, `workflow:write` |
+| **Custom** | Any subset capped by your tier ceiling |
+
+The plaintext key is shown only once at creation — copy it immediately and store it safely. If you lose it, revoke the key and generate a new one.
 
 <Warning>
-The plaintext key is shown only once — immediately after creation. Copy it before closing the dialog. If you lose it, you must delete the key and generate a new one.
+Free tier cannot create usable API keys. The Free API key ceiling is empty by product design — Free users save and run workflows from the canvas (browser session). Pro+ unlocks key creation.
 </Warning>
 
-1. Open [Settings → API Keys](https://knouds.ai/app/settings?tab=apikeys) in the Knouds app.
-2. Click **New API key** and give the key a name (e.g. `production`, `ci-pipeline`).
-3. Copy the key that appears. It will not be shown again.
+## Send your key
 
-Your key's scope is automatically set based on your account tier at creation time. If you have a Business or Enterprise account, you can also choose a lower scope when creating a key (for example, issuing a `deployment`-scoped key to a third party without granting full `admin` access).
+Pass the key in the `x-api-key` request header:
 
-## Pass the key in requests
-
-Include your API key in the `x-api-key` request header. Do not use `Authorization: Bearer`.
-
-```bash
-curl -X POST https://knouds.ai/api/workflows/my-pipeline/run \
-  -H "x-api-key: knouds_live_abc..." \
-  -H "Content-Type: application/json" \
-  -d '{"inputs": {"prompt": "a neon city at night"}}'
+```
+x-api-key: YOUR_KEY
 ```
 
-Every authenticated API endpoint accepts this header. Requests without a valid key — or with a key whose scope does not cover the endpoint — receive a `401` or `403` response.
+Every authenticated API endpoint accepts this header. Requests without a valid key — or with a key whose capabilities don't cover the endpoint — receive a `401` or `403` response.
 
-## Key scopes
+## Capabilities
 
-Every API key carries a **scope** that controls which endpoints it can reach. Scopes are cumulative: a higher scope inherits all the permissions of lower scopes.
+Each key carries a SET of capabilities, granted at creation time. Capabilities are **orthogonal** — a key with `model:run` does not automatically get `workflow:write`. Mix and match by use case (read-only audit key, single-flow CI key, full deploy key).
 
-| Scope | Default tier | Capabilities | Rate limit |
-|---|---|---|---|
-| `admin` | Business / Enterprise | Run any model, create, update, and delete workflows | 1000 req/min |
-| `deployment` | Pro | Run deployed workflows, read schemas | 100 req/min |
-| `free` | Free | Run your own deployed workflows | 10 req/min |
+| Capability | Plan tier | Reaches |
+|---|---|---|
+| `workflow:run` | Pro | Run any of your deployed workflows |
+| `workflow:read` | Pro | List workflows, read schemas |
+| `workflow:write` | Pro | Create, update, delete (ownership-checked) |
+| `workflow:<slug>:run` | Pro | Specific flow only (least-privilege CI keys) |
+| `model:run` | Business | Run any registry model |
+| `model:<id>:run` | Business | Specific model only |
+| `webhook:receive` | Pro | Receive outbound webhooks for `?async=true` runs |
+| `execution:read` | every tier | Poll your own async executions |
+| `execution:cancel` | every tier | Cancel your own in-flight executions |
 
-Rate limits apply per key, per route, per minute. When you exceed the limit, the API returns `429 RATE_LIMIT_EXCEEDED` along with `Retry-After` (seconds until the window resets) and `X-RateLimit-Reset` (Unix epoch of the reset moment) response headers.
-
-<Tip>
-Every successful response from `POST /api/workflows/:slug/run` includes `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers so you can pace your requests proactively without hitting the limit.
-</Tip>
-
-## Scope errors
-
-If your key's scope is too low for the endpoint you're calling, the API returns:
+If your key's capability set does not cover the endpoint you're calling, the API returns:
 
 ```json
 {
-  "error": "Scope denied",
-  "code": "SCOPE_DENIED",
-  "required": "admin",
-  "actual": "deployment"
+  "error": "Insufficient capability",
+  "code": "CAPABILITY_DENIED",
+  "required": "workflow:run"
 }
 ```
 
-The `required` and `actual` fields tell you exactly which scope the endpoint needs and which scope your key has. To resolve this, either use a key with the required scope or upgrade your account tier.
+The `required` field tells you exactly which capability would have passed. Either regenerate the key with broader capabilities (capped by your tier) or upgrade your tier.
 
-## Lost or compromised keys
+See [API Reference → Authentication](/api/authentication) for the full capability vocabulary, match logic, and error responses.
 
-If a key is lost or you suspect it has been exposed, delete it immediately from **Settings → API Keys** and generate a replacement. There is no way to recover the plaintext of an existing key.
+## Rotate or revoke a key
 
-Keys you delete stop working instantly. Any integrations using the old key will begin receiving `401` responses until you update them with the new key.
+Keys never expire automatically. To rotate:
+
+1. Open the [Developer Dashboard](https://knouds.ai/app/api/keys)
+2. Click **Revoke** on the old key
+3. Click **Create Key** to generate a replacement
+4. Update your integration's `x-api-key` header

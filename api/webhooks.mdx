@@ -1,0 +1,185 @@
+---
+title: "Outbound webhook delivery"
+description: "Receive callbacks at your URL when an async execution completes. HMAC-signed, retried with exponential backoff, idempotent on your end."
+---
+
+Configure a webhook URL + signing secret on your API key and Knouds will POST the result to you when an async execution completes — no polling needed. This is the event-driven alternative to [async polling](/api/async-executions).
+
+## Architecture
+
+1. You configure a webhook URL + signing secret on a specific API key (browser, **session-only** endpoint at `/api/api-keys/:id/webhook`).
+2. Your key carries the `webhook:receive` capability (granted at key creation).
+3. You submit an async run with `?async=true`. Response includes `webhookDelivery.configured: true`.
+4. When the execution finishes, a background worker on Knouds POSTs the result payload to your URL with an HMAC signature header.
+5. Your receiver verifies the signature, deduplicates on `executionId`, and processes the result.
+
+## Configuring a webhook on your key
+
+<Note>
+The per-key webhook config endpoints (`/api/api-keys/:id/webhook`) are **session-only** by design — defense-in-depth on key management. You configure webhooks via the [Developer Dashboard](https://knouds.ai/app/api/keys), not via API call.
+</Note>
+
+In the dashboard, click your key → **Webhook** → enter:
+
+- **URL** — your receiver endpoint. Must be HTTPS in production. Knouds rejects private/internal IPs (SSRF defense).
+- **Signing secret** — 16–256 chars. If omitted on first save, the server generates `whsec_<base64url>` for you.
+
+Save. The next async run on that key will deliver to your URL.
+
+## Granting `webhook:receive` to a key
+
+When you create the key, pick the **Webhook receiver** preset (capability `webhook:receive`) — or in **Custom** mode, tick the `webhook:receive` chip.
+
+A key without `webhook:receive` cannot have a webhook configured. The dashboard's Webhook tab is hidden on those keys.
+
+## Delivery payload
+
+When an execution finishes, Knouds POSTs to your URL:
+
+```json
+{
+  "event": "execution.completed",
+  "executionId": "550e8400-e29b-41d4-a716-446655440000",
+  "requestId": "kie_xyz789",
+  "userId": "u_abc",
+  "workflowSlug": "my-pipeline",
+  "modelIds": ["seedance-2-0-full-access"],
+  "status": "completed",
+  "result": {
+    "videos": [
+      { "url": "https://knouds-media.s3.amazonaws.com/media/abc.mp4" }
+    ]
+  },
+  "createdAt": "2026-05-08T19:29:55.000Z",
+  "durationMs": 47210,
+  "creditsCost": 48,
+  "source": "api-slim"
+}
+```
+
+Possible `event` values:
+
+- `execution.completed` — success; `result` populated
+- `execution.failed` — provider failure; `error: { code, message }` populated
+- `execution.cancelled` — user cancelled; `result` may also be populated if provider finished before cancel landed
+- `webhook.test` — synthetic event from clicking "Test" in the dashboard; doesn't write a `usage_log` row
+
+## HMAC verification (REQUIRED)
+
+Every delivery includes an `X-Knouds-Signature` header in **Stripe-style format**:
+
+```
+X-Knouds-Signature: t=1714512000,v1=8a4e...hex...digits
+```
+
+Where `v1 = HMAC-SHA256(signingSecret, "<unix>.<rawBody>")` and `t` is the unix timestamp (seconds). Your receiver MUST:
+
+1. Parse `t` and `v1` from the header
+2. Reject if `Math.abs(now - t) > 300` (5-minute replay window)
+3. Recompute `expected = HMAC-SHA256(secret, "${t}.${rawBody}")` and compare with `v1` using **constant-time** comparison
+4. Reject if mismatch — never trust an unverified payload
+
+### Node.js / Express receiver
+
+```javascript
+import crypto from 'node:crypto';
+import express from 'express';
+
+const app = express();
+const SECRET = process.env.KNOUDS_WEBHOOK_SECRET;
+
+// IMPORTANT: get RAW body for signature verification
+app.post('/knouds-webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const sigHeader = req.headers['x-knouds-signature'];
+  const m = String(sigHeader || '').match(/t=(\d+),v1=([0-9a-f]+)/);
+  if (!m) return res.status(400).send('bad signature header');
+
+  const [, ts, v1] = m;
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) {
+    return res.status(400).send('signature expired');
+  }
+
+  const expected = crypto
+    .createHmac('sha256', SECRET)
+    .update(`${ts}.${req.body.toString()}`)
+    .digest('hex');
+
+  const ok = expected.length === v1.length &&
+    crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(v1, 'hex'));
+
+  if (!ok) return res.status(401).send('invalid signature');
+
+  const payload = JSON.parse(req.body.toString());
+  // Idempotency: dedupe on payload.executionId — we may retry up to 6 times
+  // per the exponential backoff schedule (see below).
+  await processWebhook(payload);
+
+  res.status(200).send('ok');
+});
+```
+
+### Python / Flask receiver
+
+```python
+import hmac, hashlib, json, time
+from flask import Flask, request, abort
+
+app = Flask(__name__)
+SECRET = b"whsec_..."
+
+@app.post("/knouds-webhook")
+def webhook():
+    sig = request.headers.get("X-Knouds-Signature", "")
+    parts = dict(p.split("=", 1) for p in sig.split(",") if "=" in p)
+    ts, v1 = parts.get("t"), parts.get("v1", "")
+    if not ts or not v1:
+        abort(400)
+    if abs(time.time() - int(ts)) > 300:
+        abort(400)
+
+    body = request.get_data()  # raw bytes
+    expected = hmac.new(
+        SECRET, f"{ts}.".encode() + body, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(expected, v1):
+        abort(401)
+
+    payload = json.loads(body)
+    # Idempotency: dedupe on payload['executionId']
+    process_webhook(payload)
+    return "ok", 200
+```
+
+## Retry schedule
+
+Knouds delivers up to **6 attempts** total (1 initial + 5 retries) on this exponential backoff:
+
+| Attempt | Delay from first attempt |
+|---|---|
+| 1 (initial) | 0 |
+| 2 | 1 minute |
+| 3 | 5 minutes |
+| 4 | 30 minutes |
+| 5 | 2 hours |
+| 6 (final) | 12 hours |
+
+A delivery succeeds on any 2xx response. Any other status (3xx, 4xx, 5xx, network error) counts as a failure and triggers the next retry.
+
+After the 6th failure, `webhookNextAttemptAt` is set to NULL — no more retries. The execution is marked **delivery exhausted** in your dashboard. Your customer must manually re-fire by re-submitting the request, OR (Phase 13.5+ candidate) hitting a future replay endpoint.
+
+<Warning>
+**Idempotency is on you.** Knouds may deliver the same `executionId` up to 6 times. Your receiver MUST dedupe — typically by storing seen `executionId`s in Redis with a 24h TTL, or as a unique constraint in your jobs table.
+</Warning>
+
+## Test the configured webhook
+
+In the dashboard, click **Test** on a configured webhook. This synthesizes an `event: webhook.test` payload (no `usage_log` row written) and runs the full delivery pipeline (HMAC sign + SSRF gate + 10s abort timeout). Response shows whether your receiver returned 2xx.
+
+Use this to verify your signature verification works before pointing real production traffic at the URL.
+
+## Security defenses
+
+- **SSRF gate** — Knouds refuses to deliver to private IPs / loopback / link-local addresses. The check runs at delivery time, so DNS rebinding (public at config, private at delivery) fails closed.
+- **HTTPS required in production** — `http://` URLs are rejected unless `NODE_ENV !== 'production'` AND the URL is non-loopback (i.e. dev only).
+- **`signingSecret` is a privacy boundary** — never returned in any list endpoint; only the per-key GET endpoint returns it (browser session, owner-only).
+- **`webhookSecret` excluded from `usage_log` SELECTs** — even admin queries don't surface it accidentally.

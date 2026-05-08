@@ -1,25 +1,28 @@
 ---
 title: "Knouds API rate limits and back-off strategies"
-description: "Per-scope request limits, the response headers that track your quota in real time, and how to handle 429 responses and back off gracefully."
+description: "Per-tier request limits, the response headers that track your quota in real time, and how to handle 429 responses and back off gracefully."
 ---
 
-The Knouds API enforces rate limits per user, per route, per 60-second window. Limits are tied to your API key's scope. When you exceed the limit, requests return `429` until the current window resets.
+The Knouds API enforces rate limits per user, per route, per 60-second window. Limits are tied to your **tier**, independent of which capabilities your key carries. When you exceed the limit, requests return `429` until the current window resets.
 
-## Limits by scope
+## Per-tier limits
 
-| Scope | Plan tier | Limit |
-|-------|-----------|-------|
-| `free` | Free | 10 requests/min |
-| `deployment` | Pro | 100 requests/min |
-| `admin` | Business / Enterprise | 1,000 requests/min |
+| Tier | Limit |
+|---|---|
+| Enterprise | unlimited |
+| Business | 1,000 req/min |
+| Pro | 100 req/min |
+| Free | (no external API access by product design) |
 
-`super_admin` (platform administrators) have no rate limit applied.
+Free tier has no API key access — the table is shown for completeness only. Pro+ unlocks key creation.
 
+<Note>
 Rate limits are tracked independently per route. Calls to `POST /api/workflows/:slug/run` and `POST /api/models/:internalName/run` each maintain their own bucket — calls to one do not consume quota on the other.
+</Note>
 
 ## Rate limit headers
 
-Every successful response includes three headers that reflect the state of your current bucket:
+Every successful response from a rate-limited endpoint includes three headers that reflect the state of your current bucket:
 
 ```
 X-RateLimit-Limit: 100
@@ -28,8 +31,8 @@ X-RateLimit-Reset: 1714512000
 ```
 
 | Header | Description |
-|--------|-------------|
-| `X-RateLimit-Limit` | The maximum number of requests allowed per window for your scope |
+|---|---|
+| `X-RateLimit-Limit` | The maximum number of requests allowed per window for your tier |
 | `X-RateLimit-Remaining` | Requests remaining in the current 60-second window |
 | `X-RateLimit-Reset` | Unix epoch second at which the current window resets and your quota refills |
 
@@ -42,14 +45,17 @@ curl -i https://knouds.ai/api/workflows/my-pipeline/run \
   -d '{"inputs":{}}' | grep -i 'ratelimit\|retry-after'
 ```
 
-## When you are rate limited — 429
+## 429 responses
 
 When you exceed the limit, the API returns HTTP `429` with the `RATE_LIMIT_EXCEEDED` code:
 
 ```json
 {
   "error": "Rate limit exceeded",
-  "code": "RATE_LIMIT_EXCEEDED"
+  "code": "RATE_LIMIT_EXCEEDED",
+  "tier": "pro",
+  "limit": 100,
+  "retryAfter": 12
 }
 ```
 
@@ -97,6 +103,4 @@ async function runWithBackoff(slug, inputs) {
 }
 ```
 
-<Tip>
-If your workload consistently hits rate limit walls, upgrading your plan tier raises your quota significantly — from 10 req/min on Free to 100 req/min on Pro, or 1,000 req/min on Business and Enterprise.
-</Tip>
+If your workload consistently hits rate limit walls, upgrading your tier raises your quota — from 100 req/min on Pro to 1,000 req/min on Business, or unlimited on Enterprise.

@@ -1,18 +1,18 @@
 ---
 title: "Compare Knouds plans: Free, Pro, Business, Enterprise"
-description: "Understand what each Knouds tier includes — monthly credits, model access, API key scope, the Business application process, and how to upgrade."
+description: "Understand what each Knouds tier includes — credits, model access, API capabilities, the Business application process, and how to upgrade."
 ---
 
-Knouds organizes access to models and features through four tiers: Free, Pro, Business, and Enterprise. Each tier gives you a monthly credit allowance you spend when running pipelines, plus controls which models you can reach and which API key scopes you can use. This page explains what each tier includes and how to move between them.
+Knouds organizes access to models and features through four tiers: Free, Pro, Business, and Enterprise. Each tier gives you a credit allowance you spend when running pipelines, plus controls which models you can reach and which API capabilities your keys can grant. This page explains what each tier includes and how to move between them.
 
 ## Plan comparison
 
-| Plan | Credits per month | Models | API key scope |
-|------|------------------|--------|---------------|
-| **Free** | Trial grants (see below) | Standard models, trial-gated access | Free scope |
-| **Pro** | Monthly allowance | All standard models | Deployment scope |
-| **Business** | Higher monthly allowance | All models, including Seedance 2.0 | Admin scope |
-| **Enterprise** | Custom (unlimited) | All models, custom configuration | Admin scope |
+| Plan | Credits | Models | API access |
+|------|---------|--------|------------|
+| **Free** | 250 lifetime credits + trial grants | Standard models, trial-gated access | Canvas only (no external API) |
+| **Pro** | Monthly allowance | All standard models | `workflow:run/read/write` + per-flow allowlist + `webhook:receive`. 100 req/min. |
+| **Business** | Higher monthly allowance | All models, including Seedance 2.0 | + `model:run` + per-model allowlist + `agent:invoke`. 1,000 req/min. |
+| **Enterprise** | Custom (unlimited) | All models, custom configuration | Same as Business. Unlimited rate limit. |
 
 Credits refresh at the start of each billing cycle. They do not roll over — unused credits from one period are replaced by the new period's allowance.
 
@@ -56,17 +56,19 @@ Seedance 2.0 (both image-to-video and text-to-video variants) is only available 
 
 Other models may also carry tier restrictions — the model picker shows a lock badge on any model your current tier cannot access.
 
-## API key scope
+## API key capabilities
 
-The API keys you create in **Settings → API Keys** inherit a scope based on your tier:
+The API keys you create in the [Developer Dashboard](https://knouds.ai/app/api/keys) carry an explicit set of capabilities, capped by your tier ceiling:
 
-| Tier | Scope |
-|------|-------|
-| Free | Free scope — limited to free-tier capabilities |
-| Pro | Deployment scope — run workflows via the API |
-| Business / Enterprise | Admin scope — full API access including workflow management |
+| Tier | API key ceiling |
+|------|-----------------|
+| Free | (empty — no external API access by product design) |
+| Pro | `workflow:run`, `workflow:read`, `workflow:write`, `workflow:<slug>:run`, `webhook:receive` |
+| Business / Enterprise | + `model:run`, `model:<id>:run`, `agent:invoke` |
 
-Upgrading your tier automatically unlocks the higher scope for new keys. Existing keys keep the scope they were created with; rotate them after upgrading if you need the updated permissions.
+Capabilities are **orthogonal** — a Pro user can grant a Read-only key (`workflow:read` only) for audit/monitoring without unlocking the rest. Upgrading your tier automatically expands the ceiling. Existing keys keep the capabilities they were granted at creation; rotate or re-grant them after upgrading if you need the new permissions.
+
+See the [API authentication guide](/api/authentication) for the full capability vocabulary, presets, and migration notes.
 
 ## How to upgrade
 

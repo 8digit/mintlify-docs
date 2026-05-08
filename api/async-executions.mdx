@@ -1,0 +1,165 @@
+---
+title: "Async executions and polling"
+description: "Submit long-running model + workflow invocations with ?async=true, poll their status, and cancel in-flight runs."
+---
+
+Long-running model and workflow invocations can opt into **async mode** by appending `?async=true` to the run endpoint. The submit returns in <500ms with an `executionId`; you then either poll `GET /api/executions/:id` or receive a webhook callback when the run completes.
+
+This page documents the async lifecycle. For webhook-based delivery, see [Webhooks](/api/webhooks).
+
+## When to use async
+
+- **Video generation** — Seedance runs can take 30–90 seconds. Async lets your client return a job id immediately and poll/listen.
+- **Audio generation** — Suno V5 typically takes 30–60s for two tracks.
+- **Image generation with long pipelines** — gpt-image-2 with high `quality` settings.
+- **CI / cron** — submit dozens of jobs in parallel, poll/wait at the end.
+
+## Compatibility
+
+`?async=true` is only supported on **HTTP+polling defs** (Seedance variants, Suno V5, gpt-image-2). Other providers reject the query parameter:
+
+| Provider type | Supports async? |
+|---|---|
+| HTTP+polling (Seedance, Suno, gpt-image-2) | ✅ |
+| Fal-backed (kling-v3-i2v, kling-o3-ref2v, kling-v3-motion, seedream-v5, nano-banana-2) | ❌ → `400 ASYNC_NOT_SUPPORTED` |
+| Anthropic-backed (claude-sonnet) | ❌ → `400 ASYNC_NOT_SUPPORTED` |
+
+Use sync mode (omit `?async=true`) for unsupported providers.
+
+## Submit an async run
+
+```bash
+curl -X POST "https://knouds.ai/api/models/seedance-2-0-full-access/run?async=true" \
+  -H "x-api-key: $KNOUDS_KEY" -H "Content-Type: application/json" \
+  -d '{"inputs":{"prompt":"...","duration":"5","type":"text-to-video"}}'
+```
+
+Response (returns in <500ms):
+
+```json
+{
+  "_async": true,
+  "executionId": "550e8400-e29b-41d4-a716-446655440000",
+  "requestId": "kie_xyz789",
+  "status": "processing",
+  "webhookDelivery": {
+    "configured": false
+  },
+  "pollUrl": "/api/executions/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+<ResponseField name="_async" type="boolean">Always `true` — sentinel telling clients "this is an async submit, not a sync result".</ResponseField>
+<ResponseField name="executionId" type="string">Knouds-generated UUID. Use this to poll status or to dedupe webhook deliveries.</ResponseField>
+<ResponseField name="requestId" type="string">Provider-side request id (Kie.ai's `taskId`, Suno's id, etc.) — useful for cross-referencing in provider logs.</ResponseField>
+<ResponseField name="status" type="string">`processing` immediately after submit. Transitions to `completed`, `failed`, `cancelled`, or `cancel_requested` over time.</ResponseField>
+<ResponseField name="webhookDelivery" type="object">`{configured: true, url: '...'}` if your key has a webhook configured; otherwise `{configured: false}`.</ResponseField>
+<ResponseField name="pollUrl" type="string">Convenience path you can hit to check status (same as `/api/executions/{executionId}`).</ResponseField>
+
+The same shape applies to `POST /api/workflows/:slug/run?async=true`.
+
+## Poll an execution
+
+```
+GET /api/executions/:id
+```
+
+**Auth:** capability `execution:read` (in every tier's session AND api-key ceiling — even Free users can poll their own canvas async runs).
+
+**Response:**
+
+```json
+{
+  "executionId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "completed",
+  "requestId": "kie_xyz789",
+  "durationMs": 47210,
+  "result": {
+    "videos": [
+      { "url": "https://knouds-media.s3.amazonaws.com/media/abc.mp4" }
+    ]
+  },
+  "webhookDelivery": {
+    "configured": true,
+    "url": "https://your-app.example.com/knouds-webhook",
+    "attempts": 1,
+    "deliveredAt": "2026-05-08T19:30:42.000Z",
+    "lastError": null
+  }
+}
+```
+
+Status transitions:
+
+- `processing` → `completed` (success — `result` populated)
+- `processing` → `failed` (provider error — `error.code` populated)
+- `processing` → `cancel_requested` → `cancelled` (you called cancel; provider may have already finished, in which case `result` is also populated)
+
+## Cancel an in-flight execution
+
+```
+POST /api/executions/:id/cancel
+```
+
+**Auth:** capability `execution:cancel` (every tier).
+
+```bash
+curl -X POST "https://knouds.ai/api/executions/<uuid>/cancel" \
+  -H "x-api-key: $KNOUDS_KEY"
+```
+
+Response:
+
+```json
+{ "status": "cancel_requested" }
+```
+
+Sub-100ms latency in the normal case (in-memory abort signal). Falls back to a database flag for crash recovery — server restarts after submit but before completion still honor the cancel on the next polling tick.
+
+<Warning>
+**Always-charge policy.** Provider compute is consumed when you submit, so cancelling mid-flight does NOT refund credits. Trial grants also consume the slot. This applies to both sync and async runs.
+</Warning>
+
+If the execution has already finalized, you'll get one of:
+
+```json
+{ "status": "already_completed" }
+{ "status": "already_failed" }
+{ "status": "already_cancelled" }
+```
+
+## Recommended pattern
+
+```javascript
+// 1. Submit async
+const submit = await fetch(
+  `${BASE}/api/models/${id}/run?async=true`,
+  { method: 'POST', headers, body: JSON.stringify({ inputs }) }
+).then(r => r.json());
+
+if (!submit._async) throw new Error('expected async submit');
+
+// 2. Poll until terminal (or wait for webhook)
+async function waitForExecution(executionId) {
+  while (true) {
+    const r = await fetch(`${BASE}/api/executions/${executionId}`, { headers });
+    const row = await r.json();
+    if (['completed', 'failed', 'cancelled'].includes(row.status)) return row;
+    await new Promise(res => setTimeout(res, 2000)); // 2s interval
+  }
+}
+
+const final = await waitForExecution(submit.executionId);
+console.log(final.status, final.result);
+```
+
+For event-driven flows (no polling), configure a webhook on your key and skip the poll loop. See [Webhooks](/api/webhooks).
+
+## Errors
+
+| Status | Code | Meaning |
+|---|---|---|
+| `400` | `ASYNC_NOT_SUPPORTED` | Provider doesn't support polling. Use sync mode. |
+| `404` | `EXECUTION_NOT_FOUND` | The UUID doesn't resolve to a row owned by you (or it was deleted). |
+| `500` | `PROVIDER_SUBMIT_FAILED` | Async submit hit upstream 4xx/5xx. Body includes `providerStatus` + `providerBody` so you don't wait on a stuck `processing` row. |
+| `500` | `PROVIDER_RESPONSE_INCOMPLETE` | Polling completed but the provider's response didn't contain the expected output. Credits NOT deducted. |

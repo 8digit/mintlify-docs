@@ -39,15 +39,15 @@ New accounts require admin approval before you can run workflows. After signing 
   </Step>
 
   <Step title="Generate an API key">
-    Go to **Settings → API Keys** and create a new key. The plaintext key is shown only once at creation — copy it immediately and store it somewhere safe.
+    Open the [Developer Dashboard](https://knouds.ai/app/api/keys) (or **Settings → API Keys**, which redirects). Click **Create Key**, pick the **Workflow Deploy** preset, and copy the plaintext value — it's shown only once.
 
-    Your key's scope is determined by your account tier:
+    Your tier determines what capabilities you can grant on a key:
 
-    - **Free** — `free` scope, 10 requests/min
-    - **Pro** — `deployment` scope, 100 requests/min
-    - **Business / Enterprise** — `admin` scope, 1000 requests/min
+    - **Free** — no external API access (canvas only). Upgrade to Pro to create usable keys.
+    - **Pro** — `workflow:run`, `workflow:read`, `workflow:write`, `workflow:<slug>:run`, `webhook:receive`. 100 req/min.
+    - **Business / Enterprise** — adds `model:run`, `model:<id>:run`, `agent:invoke`. 1,000 req/min (unlimited on Enterprise).
 
-    All scopes can run deployed workflows, so any key works for the next step.
+    The **Workflow Deploy** preset grants `workflow:run` + `workflow:read` — exactly what the next step needs.
   </Step>
 
   <Step title="Call your workflow via the API">
@@ -83,6 +83,6 @@ New accounts require admin approval before you can run workflows. After signing 
 
 ## Next steps
 
-- Read the [authentication guide](/authentication) to understand API key scopes and rate limits in detail.
+- Read the [authentication guide](/authentication) to understand capabilities and rate limits in detail.
 - Explore [node types](/concepts/nodes) to see what else you can add to your pipelines.
 - Check the [API reference](/api/overview) for all available endpoints, request shapes, and error codes.

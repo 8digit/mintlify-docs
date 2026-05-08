@@ -1,0 +1,101 @@
+---
+title: "GET /api/usage — your API usage history"
+description: "Inspect your own API call history (cost, duration, status) — the same data the Developer Dashboard's Logs tab displays."
+---
+
+Returns your own API usage rows — the same data the [Developer Dashboard's Logs tab](https://knouds.ai/app/api/logs) displays. Useful for monthly cost reconciliation, debugging failed runs, or feeding usage into your own dashboards.
+
+## Endpoint
+
+```
+GET /api/usage
+```
+
+## Authentication
+
+Any authenticated request (no specific capability required). Returns only your own rows.
+
+<Note>
+**Privacy boundary.** This endpoint filters by `source IN ('api-slim', 'api-workflow')` — canvas runs are excluded. Provider-level model IDs that appear in canvas rows (`fal:...`, raw upstream URLs) never reach this endpoint, even for your own account.
+</Note>
+
+## Query parameters
+
+<ParamField query="status" type="string">Filter by lifecycle status: `processing`, `completed`, or `failed`.</ParamField>
+<ParamField query="modelId" type="string">Filter by model `internalName` (e.g. `gpt-image-2`, `seedance-2-0-full-access`).</ParamField>
+<ParamField query="workflowSlug" type="string">Filter by workflow slug.</ParamField>
+<ParamField query="limit" type="number">Max rows. Default 50, max 500.</ParamField>
+<ParamField query="offset" type="number">Pagination offset. Default 0.</ParamField>
+
+## Response
+
+```json
+{
+  "rows": [
+    {
+      "id": 188,
+      "userId": "u_abc",
+      "workflowSlug": "my-pipeline",
+      "modelIds": ["gpt-image-2"],
+      "status": "completed",
+      "source": "api-slim",
+      "cost": 0.12,
+      "userCost": 0.255,
+      "creditsCost": 255,
+      "durationMs": 47210,
+      "errorCode": null,
+      "requestId": "kie_xyz789",
+      "createdAt": "2026-05-08T19:29:55.000Z"
+    }
+  ],
+  "page": 0,
+  "pageSize": 50,
+  "total": 312
+}
+```
+
+<ResponseField name="rows[].id" type="number">Row id (increasing per row).</ResponseField>
+<ResponseField name="rows[].workflowSlug" type="string">Workflow slug if this was a workflow run; `null` for direct model runs.</ResponseField>
+<ResponseField name="rows[].modelIds" type="string[]">Registry `internalName`s involved in the run.</ResponseField>
+<ResponseField name="rows[].status" type="string">`processing` / `completed` / `failed` / `cancelled`.</ResponseField>
+<ResponseField name="rows[].source" type="string">`api-slim` (direct model run) or `api-workflow` (workflow run). Canvas runs filtered out.</ResponseField>
+<ResponseField name="rows[].cost" type="number">Provider wholesale cost in USD.</ResponseField>
+<ResponseField name="rows[].userCost" type="number">What you paid (USD), after tier markup.</ResponseField>
+<ResponseField name="rows[].creditsCost" type="number">Credits deducted from your balance.</ResponseField>
+<ResponseField name="rows[].durationMs" type="number">Total execution time in milliseconds.</ResponseField>
+<ResponseField name="rows[].errorCode" type="string">Error code on `status: 'failed'` rows (e.g. `EXECUTION_FAILED`, `PROVIDER_RESPONSE_INCOMPLETE`).</ResponseField>
+<ResponseField name="rows[].requestId" type="string">Provider-side request id (Kie.ai's `taskId`, Suno's id, etc.) for cross-referencing.</ResponseField>
+
+## Examples
+
+```bash
+# Last 50 calls
+curl https://knouds.ai/api/usage \
+  -H "x-api-key: $KNOUDS_KEY"
+
+# Only failed runs
+curl "https://knouds.ai/api/usage?status=failed&limit=100" \
+  -H "x-api-key: $KNOUDS_KEY"
+
+# Last 10 calls to a specific workflow
+curl "https://knouds.ai/api/usage?workflowSlug=my-pipeline&limit=10" \
+  -H "x-api-key: $KNOUDS_KEY"
+
+# Last 50 calls to a specific model
+curl "https://knouds.ai/api/usage?modelId=seedance-2-0-full-access&limit=50" \
+  -H "x-api-key: $KNOUDS_KEY"
+```
+
+## Distinct model IDs
+
+```
+GET /api/usage/models
+```
+
+Returns the distinct list of model `internalName`s that appear in your usage history — useful for building a filter dropdown.
+
+```bash
+curl https://knouds.ai/api/usage/models \
+  -H "x-api-key: $KNOUDS_KEY"
+# → ["gpt-image-2", "kling-v3-i2v", "seedance-2-fast", "suno-v5"]
+```
