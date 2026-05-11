@@ -17,7 +17,7 @@ The model picker lists every enabled video model in your workspace. Seven models
 
 **Kling V3 / V2.5** family — image-to-video and motion control:
 
-- **Kling V3 Pro I2V** — image-to-video
+- **Kling V3 Pro I2V** — image-to-video (supports an advanced 4K mode via API parameter; see callout below)
 - **Kling Video v2.5 Turbo Pro** — fast turbo variant
 - **Kling V3 Motion** — motion control
 - **Kling O3 Pro Ref2V** — reference-to-video with style + character refs
@@ -25,6 +25,28 @@ The model picker lists every enabled video model in your workspace. Seven models
 <Note>
 Seedance 2.0 variants require a **Business tier** subscription. Workflows that include any Seedance 2.0 node show a lock badge on the template card if your account is on a lower tier. Kling models are available on Pro+.
 </Note>
+
+<Warning>
+**Kling V3 Pro 4K mode — API-only.** Kling V3 Pro accepts an optional `4k` boolean parameter that routes the request to the model's 4K endpoint instead of the default 1080p endpoint. The 4K endpoint is **API/MCP/CLI-only** — it is intentionally not exposed on the canvas because 4K generations typically take **15–25 minutes** per 5-second clip, which is not a workable canvas UX. Output file sizes are ~18 MB vs ~9 MB for 1080p. Cost scales accordingly.
+
+To use 4K, call the model via the slim API with `4k: true` in the input:
+
+```json
+POST /api/run-model
+{
+  "model_id": "kling-video-v3-pro-image-to-video",
+  "input": {
+    "start_image_url": "https://...",
+    "prompt": "your prompt",
+    "duration": "5",
+    "4k": true
+  },
+  "async": true
+}
+```
+
+The server routes the request to `https://queue.fal.run/fal-ai/kling-video/v3/4k/image-to-video` and returns the result via async polling. Without the `4k` parameter (or with `4k: false`), the request routes to the standard `v3/pro/image-to-video` endpoint.
+</Warning>
 
 Your workspace administrator can add more video models through the Node Builder.
 
