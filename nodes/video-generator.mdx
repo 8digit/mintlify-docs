@@ -27,14 +27,13 @@ Seedance 2.0 variants require a **Business tier** subscription. Workflows that i
 </Note>
 
 <Warning>
-**Kling V3 Pro 4K mode — API-only.** Kling V3 Pro accepts an optional `4k` boolean parameter that routes the request to the model's 4K endpoint instead of the default 1080p endpoint. The 4K endpoint is **API/MCP/CLI-only** — it is intentionally not exposed on the canvas because 4K generations typically take **15–25 minutes** per 5-second clip, which is not a workable canvas UX. Output file sizes are ~18 MB vs ~9 MB for 1080p. Cost scales accordingly.
+**Kling V3 Pro 4K mode — API-only.** Kling V3 Pro accepts an optional `4k` boolean parameter that requests a 4K rendering pass instead of the default 1080p. 4K is **API/MCP/CLI-only** — it is intentionally not exposed on the canvas because 4K renders typically take **15–25 minutes** per 5-second clip, which is not a workable canvas UX. Output file sizes roughly double vs 1080p, and cost scales accordingly.
 
 To use 4K, call the model via the slim API with `4k: true` in the input:
 
 ```json
-POST /api/run-model
+POST /api/models/kling-video-v3-pro-image-to-video/run
 {
-  "model_id": "kling-video-v3-pro-image-to-video",
   "input": {
     "start_image_url": "https://...",
     "prompt": "your prompt",
@@ -45,7 +44,7 @@ POST /api/run-model
 }
 ```
 
-The server routes the request to `https://queue.fal.run/fal-ai/kling-video/v3/4k/image-to-video` and returns the result via async polling. Without the `4k` parameter (or with `4k: false`), the request routes to the standard `v3/pro/image-to-video` endpoint.
+Without the `4k` parameter (or with `4k: false`), the request renders at the standard 1080p resolution. `async: true` is strongly recommended for 4K so your client does not hold an HTTP connection open for the full render window — Knouds returns an execution id immediately and you poll via `GET /api/executions/:id`.
 </Warning>
 
 Your workspace administrator can add more video models through the Node Builder.
